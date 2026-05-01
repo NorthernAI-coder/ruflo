@@ -127,6 +127,24 @@ The Cloud Run pipeline is working end-to-end with the following validations:
 | Provider API keys via Secret Manager | Mounted at runtime as `ANTHROPIC_API_KEY`, `GOOGLE_API_KEY`, `OPENROUTER_API_KEY`, `OPENAI_API_KEY` |
 | `dotenv-cli` runtime overrides via `DOTENV_LOCAL` env var | Working — confirmed by `PUBLIC_ORIGIN` and `OPENAI_BASE_URL` taking effect at runtime |
 
+### Custom Domain (2026-05-01)
+
+- `ruvocal.ruv.io` mapped via `gcloud beta run domain-mappings create`
+- Cloudflare DNS: `CNAME ruvocal → ghs.googlehosted.com.`, **proxied:false** (gray cloud) so Google can issue and renew the managed cert directly
+- Cert provisioning is asynchronous; allow 15–30 min after DNS resolves before HTTPS works on the custom domain. The `*.run.app` URL is always available immediately
+
+### Provider Configuration (2026-05-01)
+
+The deployed instance uses **Gemini 2.5 Flash** as default via Google's OpenAI-compatible endpoint:
+
+```
+OPENAI_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai/
+OPENAI_API_KEY=<from GOOGLE_AI_API_KEY secret>
+TASK_MODEL=gemini-2.5-flash
+```
+
+Earlier attempts with `https://router.huggingface.co/v1` returned `401 "Invalid username or password"` because the available `huggingface-token` secret doesn't auth against the user-facing router endpoint, and the OpenRouter API key was incorrectly mapped against the HF base URL. Google's OpenAI-compatible endpoint accepts `GOOGLE_AI_API_KEY` directly and exposes 56 Gemini variants.
+
 ### Known Issue (Out of Scope)
 
 The homepage `/` returns HTTP 500 in production due to the `/api/v2/models` and `/api/v2/models/refresh` routes returning the SvelteKit "Page not found" page wrapped in a 500 status. Other `/api/v2/*` routes work normally. This is reproducible across multiple Cloud Run revisions and across both HuggingFace router and OpenRouter as the upstream provider — but does **not** reproduce locally with `npm run dev` using the same `.env`.

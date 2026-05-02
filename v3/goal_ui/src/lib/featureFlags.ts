@@ -38,10 +38,16 @@ export const RVF_ENABLED: boolean = envBool(
 /**
  * Base URL for server-side functions (LOCAL_FN in dev, GCF in prod).
  * Replaces Supabase Edge Function calls per ADR-093 Migration Matrix.
+ *
+ * Prod default is `''` (empty) → `client.ts` resolves to relative URLs
+ * like `/functions/v1/<name>`, which works regardless of which host
+ * actually serves the SPA (run.app preview URL, goal.ruv.io public
+ * domain, embed iframe, etc.). Set VITE_FUNCTIONS_BASE_URL only when
+ * the SPA is hosted separately from the function backend.
  */
 export const FUNCTIONS_BASE_URL: string = envString(
   import.meta.env.VITE_FUNCTIONS_BASE_URL as string | undefined,
-  /* default */ 'http://localhost:8787',
+  /* default */ import.meta.env.DEV ? 'http://localhost:8787' : '',
 );
 
 /**

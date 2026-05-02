@@ -42,6 +42,13 @@ import { RVF_ENABLED } from "@/lib/featureFlags";
 import { getWidgetConfig, saveWidgetConfig } from "@/integrations/rvf/widgetConfigRepo";
 import { getCurrentGoal, saveCurrentGoal } from "@/integrations/rvf/goalRepo";
 import { getResearchConfig, saveResearchConfig } from "@/integrations/rvf/researchConfigRepo";
+import {
+  addTrajectory,
+  setTrajectoryVerdict,
+  computeGoalHash,
+  computeConfigHash,
+  type Trajectory,
+} from "@/integrations/agentdb/trajectory";
 
 interface WidgetConfig {
   primaryColor: string;
@@ -192,6 +199,9 @@ const Index = () => {
   const [showReportModal, setShowReportModal] = useState(false);
   const [showReviseForm, setShowReviseForm] = useState(false);
   const [finalRecommendations, setFinalRecommendations] = useState<any[]>([]);
+  // R-4.2: track the active research run's trajectory so verdict
+  // updates (kept / edited) at the modal level can find the row.
+  const activeTrajectoryRef = useRef<{ goalHash: string; startedAt: number } | null>(null);
   const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
   const [researchConfig, setResearchConfig] = useState<ResearchConfig>(defaultResearchConfig);
   const [currentGOAPState, setCurrentGOAPState] = useState<Record<string, boolean | string | number>>(defaultResearchConfig.stateDefinition.currentState);
@@ -679,7 +689,21 @@ const Index = () => {
     
     setIsRunning(true);
     setShowFinalAnalysis(false);
-    
+
+    // R-4.2: trajectory recording — capture identity at run start.
+    // Per-step accumulator is built into a local array as findings
+    // arrive; the full Trajectory is persisted at run end (single
+    // write, fire-and-forget).
+    const trajGoalHash = computeGoalHash(researchGoal || userGoal || '(unknown)');
+    const trajConfigHash = computeConfigHash({
+      goap: researchConfig.goapConfig,
+      research: researchConfig.researchGuidance,
+      params: researchConfig.parameters,
+    });
+    const trajStartedAt = Date.now();
+    const perStepFindings: Trajectory['perStepFindings'] = [];
+    activeTrajectoryRef.current = { goalHash: trajGoalHash, startedAt: trajStartedAt };
+
     // Animate GOAP cards in
     setTimeout(() => setShowGOAPCards(true), 300);
     
@@ -830,6 +854,29 @@ const Index = () => {
         return newSteps;
       });
 
+      // R-4.2: trajectory per-step boundary — collect a summary of
+      // this step's findings (cap details to keep trajectory small).
+      const stepData = workingSteps[i].data ?? [];
+      const confidences = stepData
+        .map((d) => (d.details as { confidence?: number } | undefined)?.confidence)
+        .filter((c): c is number => typeof c === 'number');
+      perStepFindings.push({
+        stepTitle: workingSteps[i].title,
+        findingCount: stepData.length,
+        findings: stepData.slice(0, 10).map((d) => {
+          const det = d.details as { source?: string; confidence?: number; sources?: string[] } | undefined;
+          const src = det?.source ?? (Array.isArray(det?.sources) ? det.sources[0] : undefined);
+          return {
+            title: String(d.text ?? '').slice(0, 200) || '(untitled)',
+            source: src ? String(src).slice(0, 200) : undefined,
+            confidence: det?.confidence,
+          };
+        }),
+        avgConfidence: confidences.length
+          ? confidences.reduce((a, b) => a + b, 0) / confidences.length
+          : undefined,
+      });
+
       // Wait before moving to next step
       await new Promise(resolve => setTimeout(resolve, 500));
       
@@ -875,7 +922,33 @@ const Index = () => {
         console.error('Error generating final report:', err);
       }
     }
-    
+
+    // R-4.2: trajectory end boundary — persist the full record.
+    // Fire-and-forget; failures are logged at warn level so a bad
+    // IDB write never blocks the user-facing flow.
+    try {
+      const trajectory: Trajectory = {
+        goalHash: trajGoalHash,
+        goalText: (researchGoal || userGoal || '').slice(0, 2_000),
+        configHash: trajConfigHash,
+        presetId: researchConfig.researchGuidance?.depth ?? 'default',
+        perStepFindings: perStepFindings.length ? perStepFindings : [{
+          stepTitle: 'no-steps-recorded',
+          findingCount: 0,
+          findings: [],
+        }],
+        finalReport: { recommendationsCount: finalRecommendations.length },
+        userVerdict: undefined,
+        startedAt: trajStartedAt,
+        completedAt: Date.now(),
+      };
+      void addTrajectory(trajectory).catch((err) => {
+        console.warn('[trajectory] addTrajectory failed (non-fatal):', err?.message ?? err);
+      });
+    } catch (err) {
+      console.warn('[trajectory] build failed (non-fatal):', (err as Error)?.message ?? err);
+    }
+
     setTimeout(() => {
       setShowFinalAnalysis(true);
     }, 1000);
@@ -1615,10 +1688,20 @@ const Index = () => {
                     New Research
                   </Button>
                   <Button
-                    onClick={() => setShowReportModal(true)}
+                    onClick={() => {
+                      setShowReportModal(true);
+                      // R-4.2: viewing the full report counts as a 'kept'
+                      // signal — the user wanted to inspect the output.
+                      const t = activeTrajectoryRef.current;
+                      if (t) {
+                        void setTrajectoryVerdict(t.goalHash, t.startedAt, 'kept').catch((err) => {
+                          console.warn('[trajectory] verdict update failed:', err?.message ?? err);
+                        });
+                      }
+                    }}
                     size="sm"
                     className="gap-2"
-                    style={{ 
+                    style={{
                       backgroundColor: widgetConfig.accentColor,
                       color: '#fff'
                     }}
@@ -1642,6 +1725,14 @@ const Index = () => {
         onRevise={() => {
           setShowReportModal(false);
           setShowReviseForm(true);
+          // R-4.2: revising = the user found the report not-quite-right.
+          // Tag as 'edited' (overrides any earlier 'kept').
+          const t = activeTrajectoryRef.current;
+          if (t) {
+            void setTrajectoryVerdict(t.goalHash, t.startedAt, 'edited').catch((err) => {
+              console.warn('[trajectory] verdict update failed:', err?.message ?? err);
+            });
+          }
         }}
         primaryColor={widgetConfig.primaryColor}
         accentColor={widgetConfig.accentColor}

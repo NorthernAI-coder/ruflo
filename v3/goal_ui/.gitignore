@@ -59,3 +59,11 @@ tests/e2e/__report__/
 tests/e2e/__screenshots__/
 test-results/
 playwright-report/
+
+# Env files — only `example.env` is tracked. ADR-093 §S1 forbids
+# committing API-key-shaped values; .env can carry per-developer
+# secrets so it stays untracked.
+.env
+.env.development
+.env.production
+.env.staging

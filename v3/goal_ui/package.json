@@ -19,7 +19,9 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "functions:dev": "tsx functions/server.ts",
-    "functions:deploy": "echo 'gcloud functions deploy <name> — wire in Step 22d / Step 24' && exit 1"
+    "functions:deploy": "echo 'gcloud functions deploy <name> — wire in Step 22d / Step 24' && exit 1",
+    "check:secrets": "bash scripts/check-secrets.sh",
+    "postbuild": "bash scripts/check-secrets.sh"
   },
   "dependencies": {
     "@hono/node-server": "^1.19.14",

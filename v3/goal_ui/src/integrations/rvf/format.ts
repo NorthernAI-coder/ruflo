@@ -1,5 +1,5 @@
 /**
- * RVF (Ruflo Vector Format) v1 — browser-side header constants.
+ * RVF (RuFlo Vector Format) v1 — browser-side header constants.
  *
  * These constants match `v3/@claude-flow/memory/src/rvf-backend.ts` (Node)
  * so blobs exported from one side can be imported on the other. We keep

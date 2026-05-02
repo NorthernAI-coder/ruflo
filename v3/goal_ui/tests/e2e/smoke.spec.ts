@@ -26,12 +26,18 @@ function attachConsoleErrorGuard(page: Page): { errors: string[] } {
 }
 
 test.describe('smoke — every route loads cleanly', () => {
-  test('Index `/` renders heading + zero console errors', async ({ page }) => {
+  test('Index `/` renders heading + branding + zero console errors', async ({ page }) => {
     const guard = attachConsoleErrorGuard(page);
     const resp = await page.goto('/');
     expect(resp?.status()).toBe(200);
     // h1 reads from widgetConfig.title (default "Goal-Oriented Action Planning")
     await expect(page.getByRole('heading', { level: 1, name: /goal[- ]oriented action planning/i })).toBeVisible();
+    // Branding (Step 23): document title + og:site_name + footer mention
+    await expect(page).toHaveTitle(/RuFlo Research/);
+    const ogSiteName = await page.locator('meta[property="og:site_name"]').getAttribute('content');
+    expect(ogSiteName).toBe('RuFlo Research');
+    // Footer renders the brand
+    await expect(page.locator('footer').getByText(/RuFlo Research/)).toBeVisible();
     await page.waitForTimeout(500); // give async error-boundary triggers a tick to fire
     expect(guard.errors, 'no console errors on /').toEqual([]);
   });

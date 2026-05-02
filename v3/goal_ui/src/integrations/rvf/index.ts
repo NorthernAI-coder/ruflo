@@ -1,5 +1,5 @@
 /**
- * RVF — Ruflo Vector Format browser backend.
+ * RVF — RuFlo Vector Format browser backend.
  *
  * Public API surface for `src/integrations/rvf/`. Imported as:
  *

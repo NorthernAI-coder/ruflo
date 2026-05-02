@@ -2,7 +2,7 @@
  * RuVector ONNX MiniLM-L6 embedder for the browser.
  *
  * Uses `ruvector-onnx-embeddings-wasm` (the same RuVector embedding
- * stack the rest of the Ruflo platform uses, just running in WASM in
+ * stack the rest of the RuFlo platform uses, just running in WASM in
  * the browser). Lazy-loaded behind a dynamic import so:
  *
  *   1. The 23MB ONNX model + tokenizer aren't fetched until first call

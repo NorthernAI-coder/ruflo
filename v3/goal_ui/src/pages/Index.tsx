@@ -1690,10 +1690,12 @@ const Index = () => {
       <footer className="border-t mt-16 py-6" style={{ borderColor: `${widgetConfig.primaryColor}20` }}>
         <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center">
           <p className="text-sm" style={{ color: widgetConfig.secondaryTextColor }}>
+            <span className="font-medium" style={{ color: widgetConfig.primaryColor }}>RuFlo Research</span>
+            <span aria-hidden="true"> · </span>
             Created with <span style={{ color: widgetConfig.accentColor }}>❤️</span> by{" "}
-            <a 
-              href="https://ruv.io" 
-              target="_blank" 
+            <a
+              href="https://ruv.io"
+              target="_blank"
               rel="noopener noreferrer"
               className="font-medium hover:underline transition-colors"
               style={{ color: widgetConfig.primaryColor }}

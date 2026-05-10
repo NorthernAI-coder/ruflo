@@ -30,7 +30,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^4.0.16
-        version: 4.0.16(@opentelemetry/api@1.9.0)(@types/node@20.19.27)
+        version: 4.0.16(@opentelemetry/api@1.9.1)(@types/node@20.19.27)
 
   '@claude-flow/aidefence':
     dependencies:
@@ -96,7 +96,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^4.0.16
-        version: 4.0.16(@opentelemetry/api@1.9.0)(@types/node@20.19.27)
+        version: 4.0.16(@opentelemetry/api@1.9.1)(@types/node@20.19.27)
 
   '@claude-flow/cli':
     dependencies:
@@ -172,7 +172,7 @@ importers:
         version: 0.1.6
       agentdb:
         specifier: ^3.0.0-alpha.13
-        version: 3.0.0-alpha.13(@types/node@20.19.27)(zod@3.25.76)
+        version: 3.0.0-alpha.14(@types/node@20.19.27)(zod@3.25.76)
       agentic-flow:
         specifier: ^3.0.0-alpha.1
         version: 3.0.0-alpha.2
@@ -240,7 +240,7 @@ importers:
         version: 25.0.2(typescript@5.9.3)
       vitest:
         specifier: ^4.0.16
-        version: 4.0.16(@opentelemetry/api@1.9.0)(@types/node@20.19.27)
+        version: 4.0.16(@opentelemetry/api@1.9.1)(@types/node@20.19.27)
 
   '@claude-flow/embeddings':
     dependencies:
@@ -291,7 +291,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^4.0.16
-        version: 4.0.16(@opentelemetry/api@1.9.0)(@types/node@20.19.27)
+        version: 4.0.16(@opentelemetry/api@1.9.1)(@types/node@20.19.27)
 
   '@claude-flow/hooks':
     dependencies:
@@ -323,7 +323,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^4.0.16
-        version: 4.0.16(@opentelemetry/api@1.9.0)(@types/node@20.19.27)
+        version: 4.0.16(@opentelemetry/api@1.9.1)(@types/node@20.19.27)
 
   '@claude-flow/integration':
     dependencies:
@@ -368,7 +368,7 @@ importers:
         version: 8.18.1
       vitest:
         specifier: ^4.0.16
-        version: 4.0.16(@opentelemetry/api@1.9.0)(@types/node@20.19.27)
+        version: 4.0.16(@opentelemetry/api@1.9.1)(@types/node@20.19.27)
 
   '@claude-flow/memory':
     dependencies:
@@ -391,7 +391,7 @@ importers:
         version: 1.4.9
       vitest:
         specifier: ^4.0.16
-        version: 4.0.16(@opentelemetry/api@1.9.0)(@types/node@20.19.27)
+        version: 4.0.16(@opentelemetry/api@1.9.1)(@types/node@20.19.27)
 
   '@claude-flow/neural':
     dependencies:
@@ -404,7 +404,7 @@ importers:
     optionalDependencies:
       agentdb:
         specifier: ^2.0.0 || ^3.0.0-alpha.1
-        version: 3.0.0-alpha.13(@types/node@20.19.27)(zod@3.25.76)
+        version: 3.0.0-alpha.14(@types/node@20.19.27)(zod@3.25.76)
 
   '@claude-flow/performance':
     dependencies:
@@ -417,13 +417,16 @@ importers:
     devDependencies:
       vitest:
         specifier: ^4.0.16
-        version: 4.0.16(@opentelemetry/api@1.9.0)(@types/node@20.19.27)
+        version: 4.0.16(@opentelemetry/api@1.9.1)(@types/node@20.19.27)
 
   '@claude-flow/plugin-agent-federation':
     dependencies:
       '@noble/ed25519':
         specifier: ^2.0.0
         version: 2.3.0
+      agentic-flow:
+        specifier: 2.0.12-fix.8
+        version: 2.0.12-fix.8(@types/node@20.19.27)
     devDependencies:
       '@claude-flow/security':
         specifier: workspace:*
@@ -436,7 +439,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^4.0.16
-        version: 4.0.16(@opentelemetry/api@1.9.0)(@types/node@20.19.27)
+        version: 4.0.16(@opentelemetry/api@1.9.1)(@types/node@20.19.27)
 
   '@claude-flow/plugin-iot-cognitum':
     dependencies:
@@ -455,7 +458,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^4.0.16
-        version: 4.0.16(@opentelemetry/api@1.9.0)(@types/node@20.19.27)
+        version: 4.0.16(@opentelemetry/api@1.9.1)(@types/node@20.19.27)
 
   '@claude-flow/plugins':
     dependencies:
@@ -483,7 +486,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^4.0.16
-        version: 4.0.16(@opentelemetry/api@1.9.0)(@types/node@20.19.27)
+        version: 4.0.16(@opentelemetry/api@1.9.1)(@types/node@20.19.27)
 
   '@claude-flow/providers':
     dependencies:
@@ -521,7 +524,7 @@ importers:
     devDependencies:
       vitest:
         specifier: ^4.0.16
-        version: 4.0.16(@opentelemetry/api@1.9.0)(@types/node@20.19.27)
+        version: 4.0.16(@opentelemetry/api@1.9.1)(@types/node@20.19.27)
 
   '@claude-flow/shared':
     dependencies:
@@ -555,7 +558,7 @@ importers:
         version: 7.2.0
       vitest:
         specifier: ^4.0.16
-        version: 4.0.16(@opentelemetry/api@1.9.0)(@types/node@20.19.27)
+        version: 4.0.16(@opentelemetry/api@1.9.1)(@types/node@20.19.27)
       ws:
         specifier: ^8.16.0
         version: 8.19.0
@@ -567,7 +570,7 @@ importers:
     devDependencies:
       vitest:
         specifier: ^4.0.16
-        version: 4.0.16(@opentelemetry/api@1.9.0)(@types/node@20.19.27)
+        version: 4.0.16(@opentelemetry/api@1.9.1)(@types/node@20.19.27)
 
   '@claude-flow/testing':
     devDependencies:
@@ -585,7 +588,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^4.0.16
-        version: 4.0.16(@opentelemetry/api@1.9.0)(@types/node@20.19.27)
+        version: 4.0.16(@opentelemetry/api@1.9.1)(@types/node@20.19.27)
 
 packages:
 
@@ -738,7 +741,7 @@ packages:
     resolution: {integrity: sha512-k7vvKPbf7J2fZ5klGRD9AeKfUvojuZIQ3BT5u7Jfv+puwXkUBUT5PVyMDfJZpy30CBDXGMgw7fguK/lpOMBvgw==}
     dev: false
 
-  /@claude-flow/aidefence@3.0.2(agentdb@3.0.0-alpha.13):
+  /@claude-flow/aidefence@3.0.2(agentdb@3.0.0-alpha.14):
     resolution: {integrity: sha512-jyZa1axjjqtYyS1AbnW0fPuzKBUqRH4SnTOTJZLm5Q6E7qX7A/IG7JcZVEeyipHSl9rFfc6Tj91bC1EoV4GMQg==}
     engines: {node: '>=18.0.0'}
     requiresBuild: true
@@ -748,7 +751,7 @@ packages:
       agentdb:
         optional: true
     dependencies:
-      agentdb: 3.0.0-alpha.13(@types/node@20.19.27)(zod@3.25.76)
+      agentdb: 3.0.0-alpha.14(@types/node@20.19.27)(zod@3.25.76)
     dev: false
     optional: true
 
@@ -763,7 +766,7 @@ packages:
       '@ruvector/rabitq-wasm': 0.1.0
       semver: 7.7.4
     optionalDependencies:
-      '@claude-flow/aidefence': 3.0.2(agentdb@3.0.0-alpha.13)
+      '@claude-flow/aidefence': 3.0.2(agentdb@3.0.0-alpha.14)
       '@claude-flow/codex': 3.0.0-alpha.9(@claude-flow/cli@3.6.30)(@types/node@20.19.27)
       '@claude-flow/embeddings': 3.0.0-alpha.15(@claude-flow/shared@3.0.0-alpha.7)(agentic-flow@3.0.0-alpha.2)
       '@claude-flow/guidance': 3.0.0-alpha.2(@types/node@20.19.27)(zod@3.25.76)
@@ -778,7 +781,7 @@ packages:
       '@ruvector/ruvllm-wasm': 2.0.2
       '@ruvector/rvagent-wasm': 0.1.0
       '@ruvector/sona': 0.1.6
-      agentdb: 3.0.0-alpha.13(@types/node@20.19.27)(zod@3.25.76)
+      agentdb: 3.0.0-alpha.14(@types/node@20.19.27)(zod@3.25.76)
       agentic-flow: 3.0.0-alpha.2
     transitivePeerDependencies:
       - '@cfworker/json-schema'
@@ -900,7 +903,7 @@ packages:
       cors: 2.8.6
       express: 4.22.1
       helmet: 7.2.0
-      ws: 8.19.0
+      ws: 8.20.0
     transitivePeerDependencies:
       - bufferutil
       - supports-color
@@ -913,7 +916,7 @@ packages:
     os: [darwin, linux, win32]
     requiresBuild: true
     dependencies:
-      agentdb: 3.0.0-alpha.13(@types/node@20.19.27)(zod@3.25.76)
+      agentdb: 3.0.0-alpha.14(@types/node@20.19.27)(zod@3.25.76)
       better-sqlite3: 11.10.0
       sql.js: 1.14.1
     transitivePeerDependencies:
@@ -934,7 +937,7 @@ packages:
       '@claude-flow/memory': 3.0.0-alpha.14(@types/node@20.19.27)(zod@3.25.76)
       '@ruvector/sona': 0.1.6
     optionalDependencies:
-      agentdb: 3.0.0-alpha.13(@types/node@20.19.27)(zod@3.25.76)
+      agentdb: 3.0.0-alpha.14(@types/node@20.19.27)(zod@3.25.76)
     transitivePeerDependencies:
       - '@cfworker/json-schema'
       - '@types/node'
@@ -1287,7 +1290,7 @@ packages:
     dev: false
     optional: true
 
-  /@google/genai@1.34.0(@modelcontextprotocol/sdk@1.27.1):
+  /@google/genai@1.34.0:
     resolution: {integrity: sha512-vu53UMPvjmb7PGzlYu6Tzxso8Dfhn+a7eQFaS2uNemVtDZKwzSpJ5+ikqBbXplF7RGB1STcVDqCkPvquiwb2sw==}
     engines: {node: '>=20.0.0'}
     peerDependencies:
@@ -1296,16 +1299,15 @@ packages:
       '@modelcontextprotocol/sdk':
         optional: true
     dependencies:
-      '@modelcontextprotocol/sdk': 1.27.1(zod@4.3.5)
       google-auth-library: 10.5.0
-      ws: 8.19.0
+      ws: 8.20.0
     transitivePeerDependencies:
       - bufferutil
       - supports-color
       - utf-8-validate
     dev: false
 
-  /@google/genai@1.44.0:
+  /@google/genai@1.44.0(@modelcontextprotocol/sdk@1.27.1):
     resolution: {integrity: sha512-kRt9ZtuXmz+tLlcNntN/VV4LRdpl6ZOu5B1KbfNgfR65db15O6sUQcwnwLka8sT/V6qysD93fWrgJHF2L7dA9A==}
     engines: {node: '>=20.0.0'}
     requiresBuild: true
@@ -1315,16 +1317,16 @@ packages:
       '@modelcontextprotocol/sdk':
         optional: true
     dependencies:
+      '@modelcontextprotocol/sdk': 1.27.1(zod@4.3.5)
       google-auth-library: 10.5.0
       p-retry: 4.6.2
       protobufjs: 7.5.4
-      ws: 8.19.0
+      ws: 8.20.0
     transitivePeerDependencies:
       - bufferutil
       - supports-color
       - utf-8-validate
     dev: false
-    optional: true
 
   /@grpc/grpc-js@1.14.3:
     resolution: {integrity: sha512-Iq8QQQ/7X3Sac15oB6p0FmUg/klxQvXLeileoqrTRGJYLV+/9tubbr9ipz0GKHjmXVsgFPo/+W+2cA8eNcR+XA==}
@@ -1887,7 +1889,7 @@ packages:
       nopt: 5.0.0
       npmlog: 5.0.1
       rimraf: 3.0.2
-      semver: 7.7.3
+      semver: 7.7.4
       tar: 6.2.1
     transitivePeerDependencies:
       - encoding
@@ -4675,6 +4677,14 @@ packages:
     requiresBuild: true
     optional: true
 
+  /@rollup/rollup-darwin-arm64@4.60.3:
+    resolution: {integrity: sha512-vo6Y5Qfpx7/5EaamIwi0WqW2+zfiusVihKatLvtN1VFVy3D13uERk/6gZLU1UiHRL6fDXqj/ELIeVRGnvcTE1g==}
+    cpu: [arm64]
+    os: [darwin]
+    requiresBuild: true
+    dev: false
+    optional: true
+
   /@rollup/rollup-darwin-x64@4.54.0:
     resolution: {integrity: sha512-cOo7biqwkpawslEfox5Vs8/qj83M/aZCSSNIWpVzfU2CYHa2G3P1UN5WF01RdTHSgCkri7XOlTdtk17BezlV3A==}
     cpu: [x64]
@@ -5679,6 +5689,15 @@ packages:
     dev: false
     optional: true
 
+  /@ruvector/tiny-dancer-linux-arm64-gnu@0.1.17:
+    resolution: {integrity: sha512-bvjYL0/tyonot6KFQPAbtOdw3TGL6fIxakmn8ED6gRRcwPJ3V6VZ0WgLZfOlXiWc4I/eQvcNldgJ+3QOXurgMw==}
+    engines: {node: '>=18.0.0'}
+    cpu: [arm64]
+    os: [linux]
+    requiresBuild: true
+    dev: false
+    optional: true
+
   /@ruvector/tiny-dancer-linux-x64-gnu@0.1.15:
     resolution: {integrity: sha512-lEknFh2p73KkHz6d51cP/Y5D10AATiXRsoQEDRkOjrO0Eb5blyxal4wzdqbylyXEH7UbRePCBrCCk5BkfZD1fA==}
     engines: {node: '>=18.0.0'}
@@ -5704,6 +5723,17 @@ packages:
       '@ruvector/tiny-dancer-darwin-arm64': 0.1.15
       '@ruvector/tiny-dancer-darwin-x64': 0.1.15
       '@ruvector/tiny-dancer-linux-arm64-gnu': 0.1.15
+      '@ruvector/tiny-dancer-linux-x64-gnu': 0.1.15
+      '@ruvector/tiny-dancer-win32-x64-msvc': 0.1.15
+    dev: false
+
+  /@ruvector/tiny-dancer@0.1.18:
+    resolution: {integrity: sha512-rgkHJl/RIwIuFc+kYV8eULY+N/cDsEcxseURRcPA4vfU8TUKca0e3ENN8Fuc8Vm/bka8tzyY1TF8G2/DvFQAPA==}
+    engines: {node: '>=18.0.0'}
+    optionalDependencies:
+      '@ruvector/tiny-dancer-darwin-arm64': 0.1.15
+      '@ruvector/tiny-dancer-darwin-x64': 0.1.15
+      '@ruvector/tiny-dancer-linux-arm64-gnu': 0.1.17
       '@ruvector/tiny-dancer-linux-x64-gnu': 0.1.15
       '@ruvector/tiny-dancer-win32-x64-msvc': 0.1.15
     dev: false
@@ -5846,7 +5876,7 @@ packages:
       '@types/phoenix': 1.6.7
       '@types/ws': 8.18.1
       tslib: 2.8.1
-      ws: 8.19.0
+      ws: 8.20.0
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
@@ -6271,7 +6301,6 @@ packages:
     resolution: {integrity: sha512-wWKOClTTiizcZhXnPY4wikVAwmdYHp8q6DmC+EJUzAMsycb7HB32Kh9RN4+0gExjmPmZSAQjgURXIGATPegAvA==}
     requiresBuild: true
     dev: false
-    optional: true
 
   /@types/send@0.17.6:
     resolution: {integrity: sha512-Uqt8rPBE8SY0RK8JB1EzVOIZ32uqy8HwdxCnoCOsYrvnswqmFZ/k+9Ikidlk/ImhsdvBsloHbAlewb2IEBV/Og==}
@@ -6361,7 +6390,7 @@ packages:
       obug: 2.1.1
       std-env: 3.10.0
       tinyrainbow: 3.0.3
-      vitest: 4.0.16(@opentelemetry/api@1.9.0)(@types/node@20.19.27)
+      vitest: 4.0.16(@opentelemetry/api@1.9.1)(@types/node@20.19.27)
     transitivePeerDependencies:
       - supports-color
     dev: true
@@ -6551,7 +6580,7 @@ packages:
       chalk: 5.6.2
       commander: 12.1.0
       hnswlib-node: 3.0.0
-      sql.js: 1.14.0
+      sql.js: 1.14.1
       zod: 3.25.76
     optionalDependencies:
       better-sqlite3: 11.10.0
@@ -6730,8 +6759,8 @@ packages:
       - supports-color
     dev: false
 
-  /agentdb@3.0.0-alpha.13(@types/node@20.19.27)(zod@3.25.76):
-    resolution: {integrity: sha512-KSYyPE3am0q+RBwDfZ5Z7N0n0I9K5adsqw+8FKgBCkWFy0piupVxWfMMw8ACC/+HJ7PRHlnfCk3VBhj7jPRbMw==}
+  /agentdb@3.0.0-alpha.14(@types/node@20.19.27)(zod@3.25.76):
+    resolution: {integrity: sha512-aQzFndfdXTeFTjCOFjPQbax3Shjwu0P3zEFyrnQK06AD3N4BseDYf/yPttVE4VFcGc8BYfNj36VxU7+Y2yYzmg==}
     engines: {node: '>=18.0.0'}
     hasBin: true
     requiresBuild: true
@@ -6785,7 +6814,7 @@ packages:
     dependencies:
       '@anthropic-ai/claude-agent-sdk': 0.1.76(zod@3.25.76)
       '@anthropic-ai/sdk': 0.65.0(zod@3.25.76)
-      '@google/genai': 1.34.0(@modelcontextprotocol/sdk@1.27.1)
+      '@google/genai': 1.44.0(@modelcontextprotocol/sdk@1.27.1)
       '@supabase/supabase-js': 2.89.0
       '@xenova/transformers': 2.17.2
       agentdb: 1.6.1
@@ -6797,7 +6826,7 @@ packages:
       http-proxy-middleware: 3.0.5
       tiktoken: 1.0.22
       ulid: 3.0.2
-      ws: 8.19.0
+      ws: 8.20.0
       yaml: 2.8.2
       zod: 3.25.76
     transitivePeerDependencies:
@@ -6835,7 +6864,7 @@ packages:
       '@anthropic-ai/claude-agent-sdk': 0.1.76(zod@3.25.76)
       '@anthropic-ai/claude-code': 2.0.76
       '@anthropic-ai/sdk': 0.65.0(zod@3.25.76)
-      '@google/genai': 1.34.0(@modelcontextprotocol/sdk@1.27.1)
+      '@google/genai': 1.34.0
       '@ruvector/attention': 0.1.32
       '@ruvector/gnn': 0.1.25
       '@supabase/supabase-js': 2.89.0
@@ -6896,6 +6925,63 @@ packages:
       - utf-8-validate
     dev: false
 
+  /agentic-flow@2.0.12-fix.8(@types/node@20.19.27):
+    resolution: {integrity: sha512-pp36lAT7lXF9cyXA7KqUBe8pg7nUrGrhb3hplzTJ1V2B6y7n+jBG8/wH1gTNWk+i1+Zzzgl2zfngmY9u2qEOFg==}
+    engines: {node: '>=18.0.0'}
+    hasBin: true
+    requiresBuild: true
+    dependencies:
+      '@anthropic-ai/claude-agent-sdk': 0.1.76(zod@3.25.76)
+      '@anthropic-ai/sdk': 0.65.0(zod@3.25.76)
+      '@google/genai': 1.44.0(@modelcontextprotocol/sdk@1.27.1)
+      '@ruvector/core': 0.1.30
+      '@ruvector/edge-full': 0.1.0
+      '@ruvector/router': 0.1.30
+      '@ruvector/ruvllm': 0.2.4
+      '@ruvector/tiny-dancer': 0.1.18
+      '@supabase/supabase-js': 2.89.0
+      '@xenova/transformers': 2.17.2
+      axios: 1.13.2
+      dotenv: 16.6.1
+      express: 5.2.1
+      fastmcp: 3.26.7
+      glob: 13.0.0
+      gun: 0.2020.1241
+      http-proxy-middleware: 3.0.5
+      ruvector: 0.1.100(zod@3.25.76)
+      ruvector-onnx-embeddings-wasm: 0.1.2
+      tiktoken: 1.0.22
+      ulid: 3.0.2
+      ws: 8.20.0
+      yaml: 2.8.2
+      zod: 3.25.76
+    optionalDependencies:
+      '@rollup/rollup-darwin-arm64': 4.60.3
+      '@ruvector/attention': 0.1.32
+      '@ruvector/sona': 0.1.6
+      agentdb: 3.0.0-alpha.14(@types/node@20.19.27)(zod@3.25.76)
+      better-sqlite3: 11.10.0
+      onnxruntime-node: 1.24.3
+      sharp: 0.32.6
+      sql.js: 1.14.1
+    transitivePeerDependencies:
+      - '@cfworker/json-schema'
+      - '@modelcontextprotocol/sdk'
+      - '@types/node'
+      - '@valibot/to-json-schema'
+      - arktype
+      - bare-abort-controller
+      - bare-buffer
+      - bufferutil
+      - debug
+      - effect
+      - jose
+      - react-native-b4a
+      - supports-color
+      - sury
+      - utf-8-validate
+    dev: false
+
   /agentic-flow@2.0.3(@types/node@20.19.27)(marked@11.2.0):
     resolution: {integrity: sha512-yqrcwWG+RztVKx4w9bvIiAymXEZn93GiTsF6qhYv2gOTQyhIl+VKwY9MLuQKz+Nr5wibTJ4EPm1Cib43usvNNA==}
     engines: {node: '>=18.0.0'}
@@ -6904,7 +6990,7 @@ packages:
     dependencies:
       '@anthropic-ai/claude-agent-sdk': 0.1.76(zod@3.25.76)
       '@anthropic-ai/sdk': 0.65.0(zod@3.25.76)
-      '@google/genai': 1.34.0(@modelcontextprotocol/sdk@1.27.1)
+      '@google/genai': 1.34.0
       '@ruvector/core': 0.1.30
       '@ruvector/edge-full': 0.1.0
       '@ruvector/router': 0.1.26
@@ -6963,7 +7049,7 @@ packages:
       '@ai-sdk/google': 3.0.43(zod@3.25.76)
       '@anthropic-ai/claude-agent-sdk': 0.1.76(zod@3.25.76)
       '@anthropic-ai/sdk': 0.65.0(zod@3.25.76)
-      '@google/genai': 1.44.0
+      '@google/genai': 1.44.0(@modelcontextprotocol/sdk@1.27.1)
       '@octokit/rest': 21.1.1
       '@ruvector/graph-node': 2.0.2
       '@supabase/supabase-js': 2.89.0
@@ -9976,7 +10062,6 @@ packages:
     resolution: {integrity: sha512-mNAgZ1GmyNhD7AuqnTG3/VQ26o760+ZYBPKjPvugO8+nLbYfX6TVpJPseBvopbdY+qpZ/lKUnmEc1LeZYS3QAA==}
     requiresBuild: true
     dev: false
-    optional: true
 
   /lru-cache@10.4.3:
     resolution: {integrity: sha512-JNAzZcXrCt42VGLuYz0zfAzDfAvJWW6AfYlDBQyDV5DClI2m5sAmK+OIO7s59XfsRsWHp02jAJrRadPRGTt6SQ==}
@@ -10900,7 +10985,6 @@ packages:
       '@types/retry': 0.12.0
       retry: 0.13.1
     dev: false
-    optional: true
 
   /p-timeout@6.1.4:
     resolution: {integrity: sha512-MyIV3ZA/PmyBN/ud8vV9XzwTrNtR4jFrObymZYnZqMmW0zA8Z17vnT0rBgFE/TlohB+YCHqXMgZzb3Csp49vqg==}
@@ -11253,7 +11337,6 @@ packages:
       '@types/node': 20.19.27
       long: 5.3.2
     dev: false
-    optional: true
 
   /proxy-addr@2.0.7:
     resolution: {integrity: sha512-llQsMLSUDUPT44jdrU/O37qlnifitDP+ZwrmmZcoSKyLKvtZxpyV0n2/bD/N4tBAAZ/gJEdZU7KMraoK1+XYAg==}
@@ -11537,7 +11620,6 @@ packages:
     engines: {node: '>= 4'}
     requiresBuild: true
     dev: false
-    optional: true
 
   /reusify@1.1.0:
     resolution: {integrity: sha512-g6QUff04oZpHs0eG5p83rFLhHeV00ug/Yf9nZM6fLeUrPguBTkTQOdpAWWspMh55TZfVQDPaN3NQJfbVRAxdIw==}
@@ -13385,6 +13467,19 @@ packages:
         optional: true
       utf-8-validate:
         optional: true
+
+  /ws@8.20.0:
+    resolution: {integrity: sha512-sAt8BhgNbzCtgGbt2OxmpuryO63ZoDk/sqaB/znQm94T4fCEsy/yV+7CdC1kJhOU9lboAEU7R3kquuycDoibVA==}
+    engines: {node: '>=10.0.0'}
+    peerDependencies:
+      bufferutil: ^4.0.1
+      utf-8-validate: '>=5.0.2'
+    peerDependenciesMeta:
+      bufferutil:
+        optional: true
+      utf-8-validate:
+        optional: true
+    dev: false
 
   /xsschema@0.4.0-beta.5(zod-to-json-schema@3.25.1)(zod@4.3.5):
     resolution: {integrity: sha512-73pYwf1hMy++7SnOkghJdgdPaGi+Y5I0SaO6rIlxb1ouV6tEyDbEcXP82kyr32KQVTlUbFj6qewi9eUVEiXm+g==}

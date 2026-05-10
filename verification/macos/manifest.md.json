@@ -1,8 +1,8 @@
 {
   "manifest": {
     "schema": "ruflo-witness/v1",
-    "issuedAt": "2026-05-10T00:09:11.979Z",
-    "gitCommit": "43b566da66aebbe423541697313bca88d4cc4c17",
+    "issuedAt": "2026-05-10T00:40:18.980Z",
+    "gitCommit": "2dfde7d3fb6d5d98e617dd95004f196f8d49ef0b",
     "branch": "feat/federation-deferred-adrs",
     "os": "macos",
     "releases": {
@@ -12,8 +12,8 @@
       "@claude-flow/memory": "3.0.0-alpha.15"
     },
     "summary": {
-      "totalFixes": 95,
-      "verified": 95,
+      "totalFixes": 96,
+      "verified": 96,
       "missing": 0
     },
     "fixes": [
@@ -776,15 +776,23 @@
         "sha256": "9f751aaee838a85e7b2371bbd73dccb5cb89c6b7751496b18d33d8b8a559de19",
         "marker": "Ed25519 sig verify",
         "markerVerified": true
+      },
+      {
+        "id": "ADR-107-tls-pinning",
+        "desc": "agentic-flow loader supports wss:// + sha256 cert pinning (fail-closed) + CA validation. Federation plugin passes config.tls through to loadQuicTransport. Closes ADR-107 cross-tailnet TLS gap. agentic-flow@2.0.12-fix.6.",
+        "file": "v3/@claude-flow/plugin-agent-federation/dist/plugin.js",
+        "sha256": "9f751aaee838a85e7b2371bbd73dccb5cb89c6b7751496b18d33d8b8a559de19",
+        "marker": "loadQuicTransport",
+        "markerVerified": true
       }
     ]
   },
   "integrity": {
     "manifestHashAlgo": "sha256",
-    "manifestHash": "09316061d3ac7a22fecd933ca3ba7f95f6802132092c3827878841d5c2666c02",
+    "manifestHash": "c7aaa5c275f553fdb3dae78d83d5912de8b5016404d88a4b1c3f46dec4f5022e",
     "signatureAlgo": "ed25519",
-    "publicKey": "fb3ea2529c7d9fe371c8e8b1e42ff1fd62166fde1459e5871bef6f7a6bc9b535",
-    "signature": "72c6e5eb01f623108544533ff2b55ee6ebe3d4a6cfddc46812069a12ab331bfc471e07a55cae3f6a9decca70f1e72e2f83a912cb9e94570b42b241ba5c17900a",
+    "publicKey": "0e9974af7f5102d499fe5b005ac352d743e0c327b3fec66c670b2425b9b0d83c",
+    "signature": "4c2e4abfacae60b245b849d525e147cce4e1754245fe446808aa09eca5a99efea1a8710228be67d274c1ff0339d10a929dd5fdad8d4996c8d8b4dcca5e370608",
     "seedDerivation": "sha256(gitCommit + ':ruflo-witness/v1')"
   }
 }

@@ -102,6 +102,12 @@
       "desc": "WebSocket transport enables permessage-deflate (threshold 256B, zlib level 3, no-context-takeover both sides). Bytes-on-wire savings without latency cost \u2014 verified mac\u2194ruvultra at 10KB payload, p50=0ms, p95=1ms (same as 2KB baseline).",
       "file": "v3/@claude-flow/plugin-agent-federation/dist/plugin.js",
       "marker": "Ed25519 sig verify"
+    },
+    {
+      "id": "ADR-107-tls-pinning",
+      "desc": "agentic-flow loader supports wss:// + sha256 cert pinning (fail-closed) + CA validation. Federation plugin passes config.tls through to loadQuicTransport. Closes ADR-107 cross-tailnet TLS gap. agentic-flow@2.0.12-fix.6.",
+      "file": "v3/@claude-flow/plugin-agent-federation/dist/plugin.js",
+      "marker": "loadQuicTransport"
     }
   ]
 }

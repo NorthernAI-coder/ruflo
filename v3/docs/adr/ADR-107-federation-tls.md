@@ -1,6 +1,6 @@
 # ADR-107 — Federation TLS: tailnet trust v1, wss/cert pinning v2
 
-- Status: **Proposed — tailnet trust shipped, wss+pinning planned**
+- Status: **Accepted — Implemented (alpha.12 + agentic-flow@fix.6)**
 - Date: 2026-05-09
 - Authors: claude (drafted with rUv)
 - Related: [ADR-097](./ADR-097-federation-budget-circuit-breaker.md), [ADR-104](./ADR-104-federation-wire-transport.md), [ADR-105](./ADR-105-federation-v1-state-snapshot.md)
@@ -150,10 +150,13 @@ $ npx ruflo doctor --component federation
 | Step | Status |
 |---|---|
 | Tailnet-as-TLS documented (ADR-104) | Implemented |
-| `wss://` support in loader | Deferred — companion to agentic-flow PR |
-| Plugin `tls.*` config | Deferred |
-| Pinning helper | Deferred |
-| Doctor surface | Deferred |
+| `wss://` support in loader | **Implemented** — `agentic-flow@2.0.12-fix.6` |
+| `WebSocketFallbackTransport` accepts `tls.{certPath,keyPath}` and binds via `https.createServer` | **Implemented** |
+| Client-side `tls.pinnedFingerprints` with fail-closed `checkServerIdentity` | **Implemented** — sha256/<base64> per cert.raw, rejectUnauthorized=false (pinning IS the trust) |
+| Client-side `tls.caPath` for non-pinned CA validation | **Implemented** — rejectUnauthorized=true |
+| Plugin passes `tls` config through to transport | **Implemented** — `loadQuicTransport({ tls })` accepted in `plugin.ts initialize()` |
+| 4 new tests pin TLS config + ws-fallback compat | **Implemented** |
+| Doctor surface enhancement | Deferred — surface to add when first TLS-pinned deployment lands |
 
 ## Decision review trigger
 

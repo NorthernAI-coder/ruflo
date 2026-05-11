@@ -1,7 +1,7 @@
 # ADR-111 — Federation network mesh via WireGuard, governed by ruflo trust + breaker
 
-- Status: **Proposed**
-- Date: 2026-05-09
+- Status: **Accepted** (Phases 1-3 Implemented; Phases 4-7 Proposed)
+- Date: 2026-05-09 (Proposed) → 2026-05-10 (Phases 1-3 Implemented)
 - Authors: claude (drafted with rUv)
 - Related: [ADR-097](./ADR-097-federation-budget-circuit-breaker.md), [ADR-104](./ADR-104-federation-wire-transport.md), [ADR-105](./ADR-105-federation-v1-state-snapshot.md), [ADR-106](./ADR-106-peer-discovery.md), [ADR-107](./ADR-107-federation-tls.md)
 - Supersedes parts of: ADR-104's "tailnet provides TLS" assumption (this ADR makes ruflo own the network layer optionally)
@@ -132,7 +132,7 @@ Implementation note: WG itself doesn't natively port-filter beyond `AllowedIPs` 
 - (a) Use OS firewall (`nftables` on linux, `pf` on macOS) keyed off the WG interface — most flexible
 - (b) Expose only the mesh IP and rely on app-layer auth — simpler, less defense-in-depth
 
-ADR-111 v1 ships **(b)** for portability; **(a)** is a Phase 2 add for high-security deployments.
+ADR-111 v1 ships **(b)** for portability; **(a)** is a Phase 4 add for high-security deployments (see Implementation plan below).
 
 ### Breaker integration
 
@@ -175,7 +175,7 @@ Anyone running `node plugins/ruflo-core/scripts/witness/verify.mjs --manifest .c
 
 - Extend `FederationManifest` type with optional `wg: { publicKey, endpoint, meshIP }`
 - On plugin init: if `config.wgMesh === true`, generate a WG keypair and persist to `.claude-flow/federation/wg-key-<nodeId>.json` (mode 0600, alongside existing Ed25519 key)
-- Assign mesh IP via deterministic hash of nodeId into 10.50.0.0/16 — no central allocator needed
+- Assign mesh IP via deterministic hash of nodeId into 10.50.0.0/16 — no central allocator needed. The 10.50.0.0/16 range is RFC1918 private space outside any common LAN allocation (10.0.0.0/24 — home routers, 10.10.0.0/16 — common k8s); it also avoids 100.64.0.0/10 which Tailscale claims, so dual-stack ADR-111+tailnet deployments don't collide. Birthday-collision probability stays under 1% up to ~36 peers and under 50% at ~302 peers — well outside the ≤50-peer v1 target. **Collision handling:** if `deriveMeshIP(nodeId)` resolves to an IP already published by another peer's manifest, the WgMeshService rotates one bit of the hash input (`nodeId + '\x00'`, `nodeId + '\x01'`, …) until a free slot is found. Larger deployments should jump to `10.50.0.0/12` (~1M slots).
 - Manifest publishes the WG section + signature covers it
 
 ### Phase 2 — `WgMeshService` + config generation (3-4 days)
@@ -282,9 +282,9 @@ Q: Do you need cryptographic provenance of all coordination changes
 
 | Phase | Status |
 |---|---|
-| 1 — Manifest extension + key generation | Proposed |
-| 2 — WgMeshService + config generation | Proposed |
-| 3 — Breaker integration | Proposed |
+| 1 — Manifest extension + key generation | **Implemented** (2026-05-10) |
+| 2 — WgMeshService + config generation | **Implemented** (2026-05-10) |
+| 3 — Breaker integration | **Implemented** (2026-05-10) |
 | 4 — Trust-graded firewall rules | Proposed |
 | 5 — Witness attestation | Proposed |
 | 6 — Operator MCP tools | Proposed |

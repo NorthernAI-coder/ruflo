@@ -216,18 +216,34 @@ export function evaluatePolicy(
  * Construct once per federation coordinator. Inject the policy if you need
  * non-default thresholds (Phase 4 doctor surface will let users tune them).
  */
+/**
+ * ADR-111 Phase 3 — callback invoked after the breaker applies a successful
+ * state transition. Used by the coordinator to propagate suspends to the
+ * WG mesh layer (clearing AllowedIPs). Not invoked for `apply=false` dry runs
+ * or `NONE` / `REACTIVATE_ELIGIBLE` decisions. Errors thrown from the callback
+ * are swallowed at the breaker — the entity transition has already happened,
+ * and side-effect failures shouldn't unwind the breaker's internal state.
+ */
+export type BreakerTransitionListener = (
+  node: FederationNode,
+  decision: BreakerDecision,
+) => void | Promise<void>;
+
 export class FederationBreakerService {
   private readonly policy: BreakerPolicy;
   private readonly samples: Map<string, NormalizedSample[]>;
   private readonly maxSamplesPerPeer: number;
+  private readonly onTransition?: BreakerTransitionListener;
 
   constructor(
     policy: BreakerPolicy = DEFAULT_BREAKER_POLICY,
     maxSamplesPerPeer: number = DEFAULT_MAX_SAMPLES_PER_PEER,
+    onTransition?: BreakerTransitionListener,
   ) {
     this.policy = policy;
     this.samples = new Map();
     this.maxSamplesPerPeer = maxSamplesPerPeer;
+    this.onTransition = onTransition;
   }
 
   /** Read the active policy (handy for tests + doctor surface). */
@@ -281,15 +297,16 @@ export class FederationBreakerService {
 
     if (!apply) return decision;
 
+    let transitioned = false;
     switch (decision.action) {
       case 'SUSPEND': {
         const reason: TransitionReason = { reason: decision.reason };
-        node.suspend(reason, now);
+        transitioned = node.suspend(reason, now);
         break;
       }
       case 'EVICT': {
         const reason: TransitionReason = { reason: decision.reason };
-        node.evict(reason, now);
+        transitioned = node.evict(reason, now);
         break;
       }
       case 'REACTIVATE_ELIGIBLE':
@@ -299,6 +316,13 @@ export class FederationBreakerService {
         break;
       case 'NONE':
         break;
+    }
+
+    if (transitioned && this.onTransition) {
+      // Side-effect listener (ADR-111 Phase 3). Errors are swallowed so a
+      // failing WG propagation can't unwind the entity transition that
+      // already succeeded — coordinator should log via its own audit trail.
+      Promise.resolve(this.onTransition(node, decision)).catch(() => { /* swallow */ });
     }
 
     return decision;

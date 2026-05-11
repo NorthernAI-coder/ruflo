@@ -24,6 +24,7 @@ import type {
   FederationSpendEvent,
   SpendReporter,
 } from './spend-reporter.js';
+import type { WgMeshService, WgCommand } from '../domain/services/wg-mesh-service.js';
 
 /**
  * Optional per-call budget controls (ADR-097 Phase 1). All fields are
@@ -73,6 +74,20 @@ export interface FederationStatus {
 export interface FederationCoordinatorIntegrations {
   readonly spendReporter?: SpendReporter;
   readonly breakerService?: FederationBreakerService;
+  /**
+   * ADR-111 Phase 3 — optional WG mesh service. When present, peer state
+   * transitions (evict/reactivate/breaker-suspend) emit `wg set` commands
+   * to a sink supplied by `wgCommandSink`. No-op for peers without a `wg`
+   * manifest block, so wiring the service is safe even in mixed deployments.
+   */
+  readonly wgMesh?: WgMeshService;
+  /**
+   * Where emitted WG commands go. Defaults to the audit log only. Integrators
+   * can plug in a shell executor here (after operator approval — bringing up
+   * a network interface is destructive). Commands include shell-ready
+   * `wg set <iface> ...` strings; the sink should still validate before exec.
+   */
+  readonly wgCommandSink?: (cmd: WgCommand) => void | Promise<void>;
 }
 
 export class FederationCoordinator {
@@ -88,6 +103,8 @@ export class FederationCoordinator {
   private initialized: boolean;
   private readonly spendReporter?: SpendReporter;
   private readonly breakerService?: FederationBreakerService;
+  private readonly wgMesh?: WgMeshService;
+  private readonly wgCommandSink?: (cmd: WgCommand) => void | Promise<void>;
 
   constructor(
     config: FederationCoordinatorConfig,
@@ -112,6 +129,37 @@ export class FederationCoordinator {
     this.initialized = false;
     this.spendReporter = integrations.spendReporter;
     this.breakerService = integrations.breakerService;
+    this.wgMesh = integrations.wgMesh;
+    this.wgCommandSink = integrations.wgCommandSink;
+  }
+
+  /**
+   * ADR-111 Phase 3 — emit a WG command for an audited peer transition.
+   * No-op if no wgMesh is configured or the peer lacks a `wg` manifest
+   * block. Commands flow to `wgCommandSink` (if any) and always to the
+   * audit log so reactivation is fully traceable.
+   */
+  private async emitWgCommand(
+    peer: FederationNode,
+    builder: (pubkey: string, meshIP: string) => WgCommand | null,
+  ): Promise<void> {
+    if (!this.wgMesh) return;
+    const wgPubkey = peer.metadata.wgPublicKey as string | undefined;
+    const wgMeshIP = peer.metadata.wgMeshIP as string | undefined;
+    if (!wgPubkey || !wgMeshIP) return;
+    const cmd = builder(wgPubkey, wgMeshIP);
+    if (!cmd) return;
+    await this.audit.log('peer_manifest_published', {
+      targetNodeId: peer.nodeId,
+      metadata: {
+        wgCommand: cmd.cmd,
+        wgVerb: cmd.verb,
+        wgRationale: cmd.rationale,
+      },
+    });
+    if (this.wgCommandSink) {
+      await this.wgCommandSink(cmd);
+    }
   }
 
   async initialize(manifest: Omit<FederationManifest, 'signature'>): Promise<void> {
@@ -428,6 +476,12 @@ export class FederationCoordinator {
         session.terminate();
         this.sessions.delete(session.sessionId);
       }
+      // ADR-111 Phase 3 — propagate eviction to the WG mesh. No-op if the
+      // peer never published a wg block; otherwise drops the peer from the
+      // mesh runtime (config rebuild will also exclude it).
+      await this.emitWgCommand(peer, (pubkey) =>
+        this.wgMesh!.removePeer(peer, pubkey, reason),
+      );
     }
     return ok;
   }
@@ -505,6 +559,15 @@ export class FederationCoordinator {
         applied: ok,
       },
     });
+    if (ok) {
+      // ADR-111 Phase 3 — restore the WG AllowedIPs slice the peer had
+      // before suspension. removePeer-then-reactivate stays evicted at the
+      // mesh layer because removePeer marks the peer terminally evicted;
+      // the operator must reconfigure manually for an evicted peer to rejoin.
+      await this.emitWgCommand(peer, (pubkey, meshIP) =>
+        this.wgMesh!.restoreAllowedIPs(peer, meshIP, pubkey),
+      );
+    }
     return ok;
   }
 

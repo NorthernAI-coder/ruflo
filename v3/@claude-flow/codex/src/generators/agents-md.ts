@@ -336,10 +336,10 @@ Claude Flow exposes tools via Model Context Protocol:
 
 \`\`\`bash
 # Start MCP server
-npx @claude-flow/cli mcp start
+npx ruflo mcp start
 
 # List available tools
-npx @claude-flow/cli mcp tools
+npx ruflo mcp tools
 \`\`\`
 
 ### Available Tools

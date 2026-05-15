@@ -1,0 +1,53 @@
+[package]
+name = "ruflo-federation-peer"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.85"
+description = "Single-process federation peer for ruflo: midstreamer-quic transport composed with aimds-* 3-gate safety pipeline (ADR-120 Step 3)"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/ruvnet/ruflo"
+keywords = ["ruflo", "federation", "quic", "aimds", "agent"]
+categories = ["network-programming", "asynchronous"]
+
+[lib]
+crate-type = ["lib"]
+
+[[bin]]
+name = "ruflo-federation-peer"
+path = "src/bin.rs"
+
+[features]
+default = []
+# When `native` is enabled the binary actually wires midstreamer-quic
+# + aimds-* into the runtime. Off by default so `cargo check` works
+# in CI environments that haven't materialized the upstream Rust
+# dependency tree yet — the trait surface compiles either way.
+native = ["dep:midstreamer-quic", "dep:aimds-core", "dep:aimds-detection", "dep:aimds-analysis", "dep:aimds-response"]
+
+[dependencies]
+# Core async runtime (always required for the trait surface).
+tokio = { version = "1.42", features = ["rt-multi-thread", "macros", "io-util", "io-std", "sync"] }
+async-trait = "0.1"
+thiserror = "2.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tracing = "0.1"
+
+# Optional — only pulled in when `--features native` is on. These are
+# the upstream crates this peer is designed to compose:
+#   - midstreamer-quic@0.2.1 — quinn-backed transport (ruvnet/midstream)
+#   - aimds-{core,detection,analysis,response}@0.1.1 — the
+#     3-gate safety pipeline (ADR-118)
+midstreamer-quic = { version = "0.2.1", optional = true }
+aimds-core = { version = "0.1.1", optional = true }
+aimds-detection = { version = "0.1.1", optional = true }
+aimds-analysis = { version = "0.1.1", optional = true }
+aimds-response = { version = "0.1.1", optional = true }
+
+[dev-dependencies]
+tokio = { version = "1.42", features = ["full"] }
+
+[profile.release]
+opt-level = 3
+lto = true
+strip = true

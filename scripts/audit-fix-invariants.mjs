@@ -237,6 +237,33 @@ const INVARIANTS = [
     substring: 'loadFederationTransport',
     why: 'plugin.ts dispatches through the midstream-aware loader. Reverting to the bare loadQuicTransport import bypasses the ADR-120 preference layer entirely.',
   },
+
+  // ADR-120 Step 3 — ruflo-federation-peer Rust crate composes the
+  // QUIC transport (midstreamer-quic) with the AIMDS 3-gate pipeline.
+  {
+    issue: 'ADR-120',
+    file: 'v3/crates/ruflo-federation-peer/Cargo.toml',
+    substring: 'name = "ruflo-federation-peer"',
+    why: 'Step 3 crate name pin. The crate composes midstreamer-quic + aimds-* into a single Rust process per federation peer.',
+  },
+  {
+    issue: 'ADR-120',
+    file: 'v3/crates/ruflo-federation-peer/Cargo.toml',
+    substring: 'midstreamer-quic = { version = "0.2.1"',
+    why: 'Step 3 crate pins midstreamer-quic@0.2.1 (the published upstream version with the strictly-better security posture — OS trust store via rustls-platform-verifier).',
+  },
+  {
+    issue: 'ADR-120',
+    file: 'v3/crates/ruflo-federation-peer/src/lib.rs',
+    substring: 'pub trait TransportProvider',
+    why: 'Step 3 trait surface: TransportProvider abstracts the QUIC backend so the Peer dispatch loop is testable without the upstream Rust deps materialized.',
+  },
+  {
+    issue: 'ADR-120',
+    file: 'v3/crates/ruflo-federation-peer/src/lib.rs',
+    substring: 'pub trait SafetyGate',
+    why: 'Step 3 trait surface: SafetyGate abstracts the AIMDS 3-gate pipeline so the Peer dispatch loop is testable without the upstream aimds-* deps materialized.',
+  },
 ];
 
 const offenders = [];

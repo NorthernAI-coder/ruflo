@@ -68,14 +68,20 @@ async function probeMidstreamerTransport(
   let mod: unknown;
   try {
     // Lazy + indirect so bundlers don't try to resolve at compile time.
-    // The `'midstreamer'` package name is what `ruvnet/midstream`
-    // publishes (the README calls it `@midstream/wasm` but that's a
-    // packaging desync; install name wins — see ADR-119).
+    // Prefer the `midstreamer/quic` sub-path (added in midstreamer@0.3.1
+    // per upstream ruvnet/midstream#81) which exposes
+    // `loadQuicTransport` directly without WASM init. Fall back to the
+    // root `midstreamer` package for older versions that put the QUIC
+    // surface on the default export.
     const dynamicImport: (s: string) => Promise<unknown> = new Function(
       's',
       'return import(s)',
     ) as (s: string) => Promise<unknown>;
-    mod = await dynamicImport('midstreamer');
+    try {
+      mod = await dynamicImport('midstreamer/quic');
+    } catch {
+      mod = await dynamicImport('midstreamer');
+    }
   } catch {
     return null;
   }
@@ -84,27 +90,48 @@ async function probeMidstreamerTransport(
     loadQuicTransport?: (c?: QuicTransportConfig) => Promise<AgentTransport>;
     isNative?: () => boolean;
     isStub?: () => boolean;
+    default?: {
+      loadQuicTransport?: (c?: QuicTransportConfig) => Promise<AgentTransport>;
+      isNative?: () => boolean;
+      isStub?: () => boolean;
+    };
   };
 
-  // Refuse to use the WASM stub. ADR-119 documented the current shipped
-  // QuicMultistream as a counter-tracking stub with no real UDP, TLS,
-  // or protocol — using it would silently downgrade the federation
-  // path. When midstream@0.3.0 ships real QUIC (ADR-120, Step 1),
-  // either `isNative()` returns true OR `isStub()` is absent.
-  if (typeof candidate.isStub === 'function' && candidate.isStub()) {
-    return { transport: null as unknown as AgentTransport, reason: 'midstreamer module reports isStub() === true; refusing to bind a stub QUIC backend (ADR-119)' };
-  }
-
-  if (typeof candidate.loadQuicTransport !== 'function') {
+  // CommonJS sub-path exposes its API via `module.exports = {...};
+  // module.exports.default = module.exports;` — so we also accept the
+  // `.default` form. ESM imports flatten the named exports directly.
+  const surface = (typeof candidate.loadQuicTransport === 'function'
+    ? candidate
+    : candidate.default) as {
+    loadQuicTransport?: (c?: QuicTransportConfig) => Promise<AgentTransport>;
+    isNative?: () => boolean;
+    isStub?: () => boolean;
+  } | undefined;
+  if (!surface) {
     return null;
   }
 
-  if (typeof candidate.isNative === 'function' && !candidate.isNative()) {
+  // Refuse to use the WASM stub. ADR-119 documented the previous
+  // QuicMultistream as a counter-tracking stub with no real UDP, TLS,
+  // or protocol — using it would silently downgrade the federation
+  // path. midstreamer@0.3.1+ ships a real QUIC transport via
+  // `midstreamer/quic` (ADR-120, Step 1 — upstream PR ruvnet/midstream#81)
+  // and reports `isNative() === true`. Older versions either expose
+  // `isStub()` returning true or omit both probes.
+  if (typeof surface.isStub === 'function' && surface.isStub()) {
+    return { transport: null as unknown as AgentTransport, reason: 'midstreamer module reports isStub() === true; refusing to bind a stub QUIC backend (ADR-119)' };
+  }
+
+  if (typeof surface.loadQuicTransport !== 'function') {
+    return null;
+  }
+
+  if (typeof surface.isNative === 'function' && !surface.isNative()) {
     return null;
   }
 
   try {
-    const transport = await candidate.loadQuicTransport(config);
+    const transport = await surface.loadQuicTransport(config);
     return { transport };
   } catch (err) {
     return {

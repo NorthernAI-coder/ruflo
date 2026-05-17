@@ -1362,6 +1362,145 @@ export const embeddingsTools: MCPTool[] = [
     },
   },
   // ============================================================
+  // ADR-121 Phase 12 — HyDE embedding-level fusion (alpha.53 CLI)
+  // ============================================================
+  //
+  // HyDE (Gao, Ma, Lin, Callan 2022 — "Precise Zero-Shot Dense
+  // Retrieval without Relevance Labels"): question embeddings live in
+  // "question space" while documents embed into "answer space", so
+  // cosine search systematically underweights relevant docs. The
+  // standard fix: have an LLM generate N hypothetical answers, embed
+  // each, AVERAGE the embeddings into a single query vector, search
+  // once with that.
+  //
+  // Distinct from `embeddings_search_text_ensemble` (Phase 11):
+  //   - HyDE fuses at the EMBEDDING level (1 search after average).
+  //     Cheaper, finds the centroid hit, interpolates between
+  //     hypothetical answers.
+  //   - RRF fuses at the RANK level (N searches then merge ranks).
+  //     More expensive, preserves intent boundaries between variants.
+  //
+  // Both are useful. Production systems often combine them — HyDE
+  // inside one ranked list, RRF across multiple lists.
+  {
+    name: 'embeddings_search_text_hyde',
+    description: "Embed N hypothetical-answer texts, AVERAGE their embeddings into a single query vector, and search a named AnnRouter handle once. Implements the HyDE recipe (Gao et al. 2022) for zero-shot dense retrieval — the LLM-generated hypothetical answers live in the same answer-space as the corpus, so the averaged vector lands near the true relevant docs. Distinct from embeddings_search_text_ensemble (which fuses at the rank level via RRF — more expensive, preserves intent boundaries); HyDE fuses at the embedding level (cheaper, one search, finds the centroid hit). Optional `weights` per text (e.g. weight the user's original question 0.5× and LLM answers 1.0× each — the paper's recommended recipe). Returns hits + averaged-vector metadata (unitNorm assertion + contributing-text count) for transparency.",
+    category: 'embeddings',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        texts: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Array of hypothetical-answer texts (LLM-generated) to fuse. The caller is responsible for generating these — typically via a few-shot prompt to an LLM asking it to answer the user question.',
+        },
+        name: { type: 'string', description: 'AnnRouter handle name (set by embeddings_ann_router_build).' },
+        k: { type: 'number', description: 'Number of nearest neighbors to return.' },
+        weights: {
+          type: 'array',
+          items: { type: 'number' },
+          description: 'Per-text weights for the embedding average. Length must equal texts.length. Default uniform.',
+        },
+      },
+      required: ['texts', 'name', 'k'],
+    },
+    handler: async (input) => {
+      const config = loadConfig();
+      if (!config) {
+        return { success: false, error: 'Embeddings not initialized. Run embeddings_init first.' };
+      }
+      const texts = input.texts as string[];
+      const name = input.name as string;
+      const k = input.k as number;
+      const weights = Array.isArray(input.weights) ? input.weights as number[] : undefined;
+
+      if (!Array.isArray(texts) || texts.length === 0) {
+        return { success: false, error: 'texts must be a non-empty array' };
+      }
+      if (!Number.isInteger(k) || k < 1) {
+        return { success: false, error: 'k must be a positive integer' };
+      }
+      for (let i = 0; i < texts.length; i++) {
+        if (typeof texts[i] !== 'string') {
+          return { success: false, error: `texts[${i}] is not a string` };
+        }
+      }
+      if (weights && weights.length !== texts.length) {
+        return {
+          success: false,
+          error: `weights.length (${weights.length}) must match texts.length (${texts.length})`,
+        };
+      }
+      if (weights) {
+        for (let i = 0; i < weights.length; i++) {
+          if (weights[i]! < 0) {
+            return { success: false, error: `weights[${i}] is negative` };
+          }
+        }
+      }
+
+      const { getAnnRouterRegistry } = await import('../memory/ann-router-registry.js');
+      const registry = getAnnRouterRegistry();
+
+      // Stage 1 — embed each hypothetical text in parallel.
+      const embedT0 = Date.now();
+      let embeddings: number[][];
+      try {
+        embeddings = await Promise.all(
+          texts.map(t => generateRealEmbedding(t, config.dimension)),
+        );
+      } catch (err) {
+        return { success: false, name, error: `batch embed failed: ${err instanceof Error ? err.message : String(err)}` };
+      }
+      const embeddingMs = Date.now() - embedT0;
+
+      // Stage 2 — average the embeddings (HyDE fusion).
+      const { averageEmbeddings, isUnitNorm } = await import('@claude-flow/embeddings/embedding-fusion');
+      const fuseT0 = Date.now();
+      const avgVec = averageEmbeddings(embeddings, {
+        weights,
+        normalizeInputs: true,
+        normalizeOutput: true,
+      });
+      const fuseMs = Date.now() - fuseT0;
+      const fusedUnit = isUnitNorm(avgVec);
+
+      // Stage 3 — single search with the averaged vector.
+      const searchT0 = Date.now();
+      let hits;
+      try {
+        hits = await registry.search(name, avgVec, k);
+      } catch (err) {
+        return {
+          success: false,
+          name,
+          error: err instanceof Error ? err.message : String(err),
+          latency: { embeddingMs, fuseMs, searchMs: 0 },
+        };
+      }
+      const searchMs = Date.now() - searchT0;
+
+      return {
+        success: true,
+        name,
+        k,
+        hits,
+        hyde: {
+          textsFused: texts.length,
+          weights: weights ?? null,
+          averagedVectorUnitNorm: fusedUnit,
+          dimension: avgVec.length,
+        },
+        latency: {
+          embeddingMs,
+          fuseMs,
+          searchMs,
+          totalMs: embeddingMs + fuseMs + searchMs,
+        },
+      };
+    },
+  },
+  // ============================================================
   // ADR-121 Phase 11 — RRF ensemble retrieval (alpha.52 CLI)
   // ============================================================
   //

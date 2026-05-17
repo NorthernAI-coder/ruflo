@@ -479,6 +479,43 @@ jobs:
         shell: bash
         run: node scripts/smoke-embeddings-diskann.mjs
 
+  cli-search-text-hyde-smoke:
+    # ADR-121 Phase 12 — embeddings_search_text_hyde (HyDE embedding-level fusion).
+    # Caller provides N hypothetical-answer texts (typically LLM-generated),
+    # tool embeds each and averages them into a single query vector, then
+    # searches once. Standard HyDE recipe (Gao et al. 2022) for zero-shot
+    # dense retrieval — hypothetical answers live in answer-space which
+    # matches the corpus space, so averaging produces a query vector that
+    # lands near true relevant docs. Distinct from Phase 11 RRF ensemble
+    # which fuses at the rank level (N searches then merge); HyDE fuses
+    # at the embedding level (one search after average). Smoke drives:
+    # init → router build → 3-text HyDE → weighted → single-text degenerate
+    # → 4 validation paths → missing-handle path. Asserts unit-norm
+    # contract on averaged vector + k-respecting + per-stage latency.
+    name: cli embeddings_search_text_hyde smoke (#2036, ADR-121 Phase 12)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Build embeddings then CLI
+        run: |
+          cd v3/@claude-flow/embeddings
+          npm install --no-audit --no-fund --legacy-peer-deps
+          npx tsc -p tsconfig.json
+          cd ../cli
+          npm install --no-audit --no-fund --legacy-peer-deps
+          npx tsc --build --force tsconfig.json
+
+      - name: Assert HyDE embedding-fusion contract
+        shell: bash
+        run: node scripts/smoke-cli-search-text-hyde.mjs
+
   cli-search-text-ensemble-smoke:
     # ADR-121 Phase 11 — embeddings_search_text_ensemble (RRF ensemble RAG).
     # Standard question-reformulation pattern: expand one user question

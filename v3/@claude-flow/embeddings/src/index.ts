@@ -133,6 +133,17 @@ export {
   type RrfFusedHit,
 } from './rrf.js';
 
+// ADR-121 Phase 12 — Embedding-level fusion (HyDE, Gao et al. 2022).
+// Averages N embedding vectors into a single query vector — fuses at
+// the embedding level (one search after average) vs RRF which fuses
+// at the rank level (N searches then merge). Standard HyDE recipe
+// for zero-shot dense retrieval. Composes with any retrieval shape.
+export {
+  averageEmbeddings,
+  isUnitNorm,
+  type AverageEmbeddingsOptions,
+} from './embedding-fusion.js';
+
 export type { AutoEmbeddingConfig } from './embedding-service.js';
 
 // RVF embedding service (pure-TS hash-based embeddings)

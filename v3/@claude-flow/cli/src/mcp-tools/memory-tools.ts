@@ -982,14 +982,16 @@ export const memoryTools: MCPTool[] = [
         const claudeEntries = await listEntries({ namespace: 'claude-memories' });
         claudeMemoryEntries = (claudeEntries as { total?: number })?.total
           ?? claudeEntries?.entries?.length ?? 0;
-        // Per-namespace counts for the namespaces the reporter referenced
-        // (#1940). Best-effort — a namespace with 0 entries is omitted.
-        for (const ns of ['default', 'patterns', 'claude-memories', 'auto-memory', 'tasks', 'feedback', 'pretrain']) {
-          try {
-            const r = await listEntries({ namespace: ns });
-            const t = (r as { total?: number })?.total ?? r?.entries?.length ?? 0;
-            if (t > 0) namespaceCounts[ns] = t;
-          } catch { /* skip per-namespace failure */ }
+        // #2037 + #1940: per-namespace counts via dynamic enumeration
+        // from the already-fetched `allEntries`. The old hardcoded
+        // 7-namespace whitelist silently dropped custom namespaces
+        // (team prefixes, plugin namespaces, etc.) from the bridge
+        // status — exactly the bug #2037 reported on the sibling
+        // memory_search_unified tool.
+        for (const e of allEntries?.entries ?? []) {
+          if (typeof e.namespace === 'string' && e.namespace.length > 0) {
+            namespaceCounts[e.namespace] = (namespaceCounts[e.namespace] ?? 0) + 1;
+          }
         }
       } catch { /* ignore */ }
 
@@ -1015,32 +1017,67 @@ export const memoryTools: MCPTool[] = [
 
   {
     name: 'memory_search_unified',
-    description: 'Search across both Claude Code memories and AgentDB entries using semantic vector similarity. Returns merged, deduplicated results from all namespaces. Use when native Read/Write is wrong because you need (a) cross-session retrieval by semantic similarity (vector embeddings) not by file path, (b) namespacing across projects without managing directory layout, or (c) the .swarm/memory.db audit trail. For one-shot file I/O, native Read/Write is fine.',
+    description: 'Search across Claude Code memories and AgentDB entries using semantic vector similarity. By default DYNAMICALLY ENUMERATES all namespaces in the store via listEntries — no longer hardcoded — so custom namespaces (e.g. team/project-prefixed) are included. Use `namespace` to filter to one, or `namespaces` to target an explicit set. Returns merged, deduplicated results sorted by score. Native Read/Write is fine for one-shot file I/O; use this when you need (a) cross-session retrieval by semantic similarity, (b) cross-namespace search without managing the namespace list, or (c) the .swarm/memory.db audit trail.',
     category: 'memory',
     inputSchema: {
       type: 'object',
       properties: {
         query: { type: 'string', description: 'Search query (natural language)' },
         limit: { type: 'number', description: 'Max results (default: 10)' },
-        namespace: { type: 'string', description: 'Filter to namespace (omit for all)' },
+        namespace: { type: 'string', description: 'Filter to a single namespace. Omit for all.' },
+        namespaces: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Explicit list of namespaces to search. Overrides the auto-enumeration. Use when you know exactly which namespaces are relevant (e.g. team prefixes). Ignored when `namespace` is set.',
+        },
       },
       required: ['query'],
     },
     handler: async (input) => {
       await ensureInitialized();
-      const { searchEntries } = await getMemoryFunctions();
+      const { searchEntries, listEntries } = await getMemoryFunctions();
       validateMemoryInput(undefined, undefined, input.query as string);
 
       const query = input.query as string;
       const limit = (input.limit as number) ?? 10;
       const ns = input.namespace as string | undefined;
+      const explicitNamespaces = Array.isArray(input.namespaces) ? input.namespaces as string[] : undefined;
 
       if (ns) { const vNs = validateIdentifier(ns, 'namespace'); if (!vNs.valid) return { success: false, query, results: [], total: 0, error: vNs.error }; }
+      if (explicitNamespaces) {
+        for (const n of explicitNamespaces) {
+          const v = validateIdentifier(n, 'namespace');
+          if (!v.valid) return { success: false, query, results: [], total: 0, error: v.error };
+        }
+      }
 
-      // Search all namespaces unless filtered
-      const namespaces = ns ? [ns] : ['default', 'claude-memories', 'auto-memory', 'patterns', 'tasks', 'feedback'];
+      // #2037: enumerate namespaces dynamically. Resolution order:
+      //   1. `namespace` (single string) → that one only
+      //   2. `namespaces` (explicit array) → that list
+      //   3. Auto-discover every namespace present in the store via
+      //      listEntries — replaces the old hardcoded 6-namespace
+      //      whitelist that silently dropped custom namespaces.
+      let namespaces: string[];
+      if (ns) {
+        namespaces = [ns];
+      } else if (explicitNamespaces && explicitNamespaces.length > 0) {
+        namespaces = explicitNamespaces;
+      } else {
+        try {
+          const all = await listEntries({ limit: 100000 });
+          const seen = new Set<string>();
+          for (const e of all.entries ?? []) {
+            if (typeof e.namespace === 'string' && e.namespace.length > 0) seen.add(e.namespace);
+          }
+          namespaces = seen.size > 0 ? Array.from(seen).sort() : ['default'];
+        } catch {
+          // Listing failed (store empty or backend hiccup) — fall back
+          // to 'default' so the tool always returns something coherent.
+          namespaces = ['default'];
+        }
+      }
+
       const allResults: Array<{ key: string; content: string; score: number; namespace: string; source: string }> = [];
-
       for (const searchNs of namespaces) {
         try {
           const r = await searchEntries({ query, namespace: searchNs, limit: limit * 2 });
@@ -1051,11 +1088,13 @@ export const memoryTools: MCPTool[] = [
                 content: (entry.content || (entry as any).value || '').toString().slice(0, 200),
                 score: entry.score || 0,
                 namespace: searchNs,
-                source: searchNs === 'claude-memories' ? 'claude-code' : searchNs === 'auto-memory' ? 'auto-memory' : 'agentdb',
+                source: searchNs === 'claude-memories' ? 'claude-code'
+                  : searchNs === 'auto-memory' ? 'auto-memory'
+                  : 'agentdb',
               });
             }
           }
-        } catch { /* namespace may not exist */ }
+        } catch { /* namespace search failure — keep going */ }
       }
 
       // Sort by score, deduplicate by key, take top N

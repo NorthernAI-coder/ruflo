@@ -479,6 +479,43 @@ jobs:
         shell: bash
         run: node scripts/smoke-embeddings-diskann.mjs
 
+  memory-unified-custom-ns:
+    # #2037 regression guard — memory_search_unified used to hardcode
+    # a 6-namespace whitelist and silently drop custom namespaces.
+    # Fixed by dynamically enumerating namespaces via listEntries.
+    # This smoke creates a uniquely-named custom namespace, stores
+    # an entry, runs unified search WITHOUT a namespace filter, and
+    # asserts the custom namespace appears in searchedNamespaces AND
+    # the entry is returned. Also tests the new namespaces=[...]
+    # explicit-list path.
+    name: memory_search_unified custom-namespace smoke (#2037)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Build CLI
+        run: |
+          cd v3/@claude-flow/cli
+          npm install --no-audit --no-fund --legacy-peer-deps
+          npx tsc --build --force tsconfig.json
+
+      - name: Assert custom-namespace unified search contract
+        shell: bash
+        run: |
+          # Run from a fresh empty subdir so the smoke uses a clean
+          # .swarm/memory.db (the script tests against a unique
+          # namespace name so cross-contamination isn't an issue,
+          # but starting clean keeps the test deterministic).
+          mkdir -p .ci-smoke-2037
+          cd .ci-smoke-2037
+          node "$GITHUB_WORKSPACE/scripts/smoke-cli-memory-search-unified-custom-ns.mjs"
+
   rag-cached-router:
     # ADR-121 Phase 21 — Cache-aware lazy router benchmark.
     # Content-addressed embed cache composed with the Phase 20 lazy

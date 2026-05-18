@@ -251,53 +251,53 @@ const designDocs = await orchestrator.getMemory('design-decisions');
 
 ### Auto-Start Swarm Protocol
 
-When the user requests a complex task (multi-file changes, feature implementation, refactoring), **immediately execute this pattern in a SINGLE message:**
+When the user requests a complex task (multi-file changes, feature implementation, refactoring), **immediately execute this pattern in a SINGLE message** — using the memory-as-bus pattern from #2028 (subagents can't message each other; the lead orchestrates phases by spawning, verifying memory outputs, then spawning the next phase):
 
 ```javascript
-// STEP 1: Initialize swarm coordination via MCP
+// STEP 1: Initialize swarm coordination via MCP (registry only — these
+// are coordination metadata, not actual workers).
 mcp__ruv-swarm__swarm_init({
   topology: "hierarchical",
   maxAgents: 8,
   strategy: "specialized"
 })
 
-// STEP 2: Spawn NAMED agents concurrently — all in ONE message
-// Each agent knows WHO to message next in the pipeline
+// STEP 2: Spawn PHASE 1 agents — independent parallel work.
+// Each writes outputs to deterministic memory keys (not SendMessage).
+// Each brief includes a degraded-mode paragraph so missing tool grants
+// don't abort the agent — it falls back to file reads + the final message.
 Task({
-  prompt: "Research requirements and codebase. SendMessage findings to 'architect' when done.",
+  prompt: `Research requirements and codebase.
+
+OUTPUT: Write findings JSON to memory key phase1/researcher/findings.
+
+DEGRADED MODE: If memory tools are missing, return findings JSON in your final message.`,
   subagent_type: "researcher", name: "researcher", run_in_background: true
 })
 Task({
-  prompt: "Wait for research from 'researcher'. Design implementation. SendMessage design to 'coder'.",
-  subagent_type: "system-architect", name: "architect", run_in_background: true
-})
-Task({
-  prompt: "Wait for design from 'architect'. Implement the solution. SendMessage code paths to 'tester'.",
-  subagent_type: "coder", name: "coder", run_in_background: true
-})
-Task({
-  prompt: "Wait for implementation from 'coder'. Write tests. SendMessage results to 'reviewer'.",
-  subagent_type: "tester", name: "tester", run_in_background: true
-})
-Task({
-  prompt: "Wait for test results from 'tester'. Review code quality and security. Report findings.",
-  subagent_type: "reviewer", name: "reviewer", run_in_background: true
+  prompt: `Walk the source for capability inventory.
+
+OUTPUT: Write inventory to memory key phase1/source-reader/inventory.
+
+DEGRADED MODE: If memory tools are missing, return the inventory in your final message.`,
+  subagent_type: "coder", name: "source-reader", run_in_background: true
 })
 
-// STEP 3: Kick off the pipeline
-SendMessage({ to: "researcher", summary: "Start research", message: "[task description and context]" })
+// STEP 3: WAIT for Phase 1 completion (task results arrive automatically).
+// AFTER both finish, the lead reads memory_search results and spawns Phase 2
+// with explicit input-key lists in each brief. Do NOT pre-spawn Phase 2 here
+// asking it to "wait for SendMessage" — subagents have no inbox.
 
 // STEP 4: Batch todos
 TodoWrite({ todos: [
-  {content: "Research and analyze requirements", status: "in_progress", activeForm: "Researching"},
-  {content: "Design architecture", status: "pending", activeForm: "Designing"},
-  {content: "Implement solution", status: "pending", activeForm: "Implementing"},
-  {content: "Write tests", status: "pending", activeForm: "Testing"},
-  {content: "Review and finalize", status: "pending", activeForm: "Reviewing"}
+  {content: "Phase 1: research + inventory (parallel)", status: "in_progress", activeForm: "Phase 1"},
+  {content: "Phase 2: design (after Phase 1 outputs in memory)", status: "pending", activeForm: "Phase 2"},
+  {content: "Phase 3: implement + test (parallel after design)", status: "pending", activeForm: "Phase 3"},
+  {content: "Phase 4: review (after implement + test)", status: "pending", activeForm: "Phase 4"}
 ]})
 
-// Pipeline flow via SendMessage:
-// researcher ──→ architect ──→ coder ──→ tester ──→ reviewer
+// Coordination flow: lead spawns each phase → verifies memory → spawns next.
+// NOT subagent-to-subagent SendMessage — that path silently fails (#2028).
 ```
 
 ### Agent Routing (Anti-Drift)
@@ -541,165 +541,100 @@ const config = optimizer.getOptimalConfig(agentCount);
 ### Testing & Validation
 `tdd-london-swarm`, `production-validator`
 
-## Agent Teams & Comms System
+## Agent Teams & Comms — Reality-Based Coordination
 
-Agent Teams turns Claude Code into a multi-agent system where named agents communicate in real-time via `SendMessage`. The comms system is the primary coordination mechanism — agents talk to each other, not just to the lead.
+**Tool-availability asymmetry:** `SendMessage` works **lead↔subagent** and lead↔lead, but **NOT subagent↔subagent**. Subagents spawned via the `Agent` / `Task` tool are stateless one-shot workers — they have no inbox, cannot wait for events, and `SendMessage`/`TaskUpdate` are typically not in their tool allowlists. The `hive-mind_*` MCP tools provide coordination **metadata** (registry, consensus state) but do NOT grant subagents communication channels. Patterns that assume peer messaging will silently fail — agents either abort cleanly or run open-loop with stale assumptions. (See ruvnet/ruflo#2028 for the diagnosis.)
 
-### Architecture
+> Verified empirically: spawning N subagents that try to coordinate via SendMessage produces some clean aborts + some agents that "complete" only because they ignore the brief and use the shared memory namespace as a bus.
+
+### Canonical pattern: memory-as-bus, lead-orchestrated phases
 
 ```
-Team Lead (you)
-  ├── SendMessage ←→ architect (named agent)
-  ├── SendMessage ←→ developer (named agent)
-  ├── SendMessage ←→ tester (named agent)
-  └── SendMessage ←→ reviewer (named agent)
-       ↕ agents can message each other by name
+Lead (the orchestrator)
+  │
+  ├─ spawns agent → agent reads inputs from memory keys → writes outputs to memory keys → completes
+  │
+  ├─ verifies outputs in memory
+  │
+  └─ spawns next agent with explicit input-key list in its brief
 ```
 
-### Core Principle: Named Agents + SendMessage
+All inter-agent state lives in a shared memory namespace (`mcp__ruflo__memory_store` / `mcp__claude-flow__memory_store` / `memory_search`). Lead-to-subagent `SendMessage` is fine when needed; subagent-to-subagent `SendMessage` is not.
 
-Every agent MUST have a `name` so it's addressable. Communication happens via `SendMessage`, not polling or shared memory.
+### Spawning rules
+
+- **Parallelize ONLY when work is genuinely independent** (no upstream dependency between siblings). E.g. doc-inventory + source-inventory in Phase 1 = parallel. Phase-2 critics waiting on Phase-1 outputs = sequential.
+- **Spawn dependent agents only after the lead confirms upstream outputs are in memory.** Do NOT tell a downstream agent to "WAIT for SendMessage from X" — it has no mechanism to wait; it will abort.
+- **Every subagent brief MUST include a degraded-mode paragraph** at the top: *"If your expected coordination tools (SendMessage, TaskUpdate, hive-mind_*) are missing, do NOT abort. Read these specific source files directly, write outputs to these specific memory keys, and complete your phase."*
+- **Name agents** — `name: "role"` makes them addressable by the lead even though they cannot address each other.
+- **After spawning**: STOP, tell user what's running, wait for completion notifications. No polling.
+
+### Spawning example (memory-as-bus, lead-orchestrated)
 
 ```javascript
-// STEP 1: Spawn named agents (all in ONE message, background)
+// Phase 1 — independent parallel work, write outputs to deterministic memory keys
 Task({
-  prompt: "Design the API. When done, send your design to 'developer' via SendMessage.",
-  subagent_type: "system-architect",
-  name: "architect",
-  run_in_background: true
+  prompt: `Read docs at <paths>. Write inventory JSON to memory key phase1/researcher/inventory in namespace <ns>.
+
+DEGRADED MODE: If memory tools are missing, do NOT abort. Return the inventory JSON in your final message instead.`,
+  subagent_type: "researcher", name: "researcher", run_in_background: true
 })
 Task({
-  prompt: "Wait for architect's design via SendMessage. Then implement it. Send code to 'tester'.",
-  subagent_type: "coder",
-  name: "developer",
-  run_in_background: true
-})
-Task({
-  prompt: "Wait for developer's code via SendMessage. Write tests. Send results to 'reviewer'.",
-  subagent_type: "tester",
-  name: "tester",
-  run_in_background: true
+  prompt: `Walk the source tree. Write capability matrix to memory key phase1/coder/capability-matrix.
+
+DEGRADED MODE: ...`,
+  subagent_type: "coder", name: "source-reader", run_in_background: true
 })
 
-// STEP 2: Kick off the pipeline by messaging the first agent
-SendMessage({
-  to: "architect",
-  summary: "Start API design",
-  message: "Design a REST API for user management with CRUD endpoints. Send the design to 'developer' when done."
-})
+// AFTER both Phase 1 agents complete (lead verifies via memory_search), THEN spawn Phase 2.
+// Each Phase 2 agent's brief explicitly lists the Phase 1 memory keys it should read.
 ```
 
-### SendMessage Protocol
+### Lead → subagent SendMessage (still works)
+
+`SendMessage` is still useful for **lead → subagent** redirects, priority changes, and graceful shutdown — these are the lead talking to a workers, not workers talking to each other:
 
 ```javascript
-// Lead → Teammate: assign work
-SendMessage({ to: "developer", summary: "Implement auth", message: "Build OAuth2 flow..." })
+// Lead → subagent: redirect or update priority mid-flight
+SendMessage({ to: "developer", summary: "Prioritize auth", message: "Auth is blocking tester, do that first." })
 
-// Lead → Teammate: redirect priorities
-SendMessage({ to: "developer", summary: "Prioritize auth", message: "Auth endpoint is blocking tester, do it first." })
-
-// Lead → Teammate: provide context from another agent's results
-SendMessage({ to: "tester", summary: "Architect output", message: "The architect designed these endpoints: [details]. Write tests for them." })
-
-// Lead → Teammate: graceful shutdown
+// Lead → subagent: graceful shutdown
 SendMessage({ to: "developer", message: { type: "shutdown_request" } })
 ```
 
-### Coordination Patterns
+### Patterns
 
-**Pipeline (A → B → C)** — each agent messages the next when done:
-```
-architect ──SendMessage──→ developer ──SendMessage──→ tester ──SendMessage──→ reviewer
-```
-Tell each agent WHO to message next in their prompt.
+| Pattern | Flow | Use When |
+|---------|------|----------|
+| **Sequential pipeline** | Lead → A → (verify in memory) → B → (verify) → C | Phase dependencies (audit, complex refactor) |
+| **Fan-out** | Lead → A, B, C (parallel) → Lead aggregates from memory | Independent parallel work (research, multi-lens critique) |
+| **Lead-as-bus** | Subagents → Lead → reroute by spawning next | Workaround when supervisor↔workers coordination needed |
 
-**Fan-out / Fan-in** — lead spawns parallel agents, collects results:
-```
-         ┌→ researcher-1 ──→┐
-lead ────┼→ researcher-2 ──→├──→ lead synthesizes
-         └→ researcher-3 ──→┘
-```
-Spawn with `run_in_background: true`. Results arrive as task completions.
+### Anti-patterns (will silently fail)
 
-**Supervisor / Worker** — lead assigns, workers report back:
-```
-lead ←──SendMessage──→ worker-1
-lead ←──SendMessage──→ worker-2
-lead ←──SendMessage──→ worker-3
-```
-Lead sends tasks via SendMessage, workers respond with results.
+- "WAIT for SendMessage from X" in a subagent prompt — no mechanism to wait
+- "SendMessage findings to architect" in a subagent prompt — architect can't receive
+- Spawning N dependent agents in one batch expecting them to chain via messages — they won't
+- Relying on `hive-mind_consensus` to gather subagent votes — subagents aren't registered hive workers
 
-### Agent Prompt Template (Comms-Aware)
+### Memory key conventions
 
-When spawning agents that need to coordinate, include comms instructions:
+Use `phase{N}/{role}/{artifact}` — flat enough to grep, structured enough that the lead can reason about which outputs are ready. Multi-phase audits benefit from human-readable phase prefixes when going back to inspect what happened.
 
-```javascript
-Task({
-  prompt: `You are the architect for this feature team.
+### Why the degraded-mode paragraph is load-bearing
 
-YOUR TASK: Design the database schema for user management.
-
-COMMS PROTOCOL:
-- When your design is ready, send it to "developer" via SendMessage
-- If you need clarification, message the team lead (just output text)
-- Include file paths and key decisions in your message
-
-DELIVERABLE: Schema design with entity relationships, indexes, and migration plan.`,
-  subagent_type: "system-architect",
-  name: "architect",
-  run_in_background: true
-})
-```
-
-### Full Team Spawn Example
-
-```javascript
-// Create shared task list first
-TaskCreate({ subject: "Design schema", description: "...", activeForm: "Designing" })
-TaskCreate({ subject: "Implement models", description: "...", activeForm: "Implementing" })
-TaskCreate({ subject: "Write tests", description: "...", activeForm: "Testing" })
-TaskCreate({ subject: "Security review", description: "...", activeForm: "Reviewing" })
-
-// Spawn ALL named agents in ONE message
-Task({
-  prompt: "Design the schema. SendMessage to 'developer' with your design when done. Update task #1.",
-  subagent_type: "system-architect", name: "architect", run_in_background: true
-})
-Task({
-  prompt: "Wait for schema from 'architect'. Implement models + endpoints. SendMessage to 'tester'. Update task #2.",
-  subagent_type: "coder", name: "developer", run_in_background: true
-})
-Task({
-  prompt: "Wait for code from 'developer'. Write integration tests. SendMessage results to 'security'. Update task #3.",
-  subagent_type: "tester", name: "tester", run_in_background: true
-})
-Task({
-  prompt: "Wait for test results from 'tester'. Review for vulnerabilities. Update task #4.",
-  subagent_type: "security-auditor", name: "security", run_in_background: true
-})
-```
-
-### Agent Teams Hooks
-
-| Hook | Trigger | Purpose |
-|------|---------|---------|
-| `TeammateIdle` | Teammate finishes turn | Auto-assign pending tasks via SendMessage |
-| `TaskCompleted` | Task marked complete | Train patterns, notify lead via SendMessage |
-
-```bash
-npx claude-flow@v3alpha hooks teammate-idle --auto-assign true
-npx claude-flow@v3alpha hooks task-completed -i task-123 --train-patterns true
-```
+Without it, agents that hit a missing tool abort cleanly (per spec) — *technically correct* but operationally useless. The paragraph converts "abort" into "fall back to the file system and memory" and is what keeps a swarm running when subagent tool grants are narrower than expected.
 
 ### Rules
 
-1. **Always name agents** — use `name: "role-name"` so they're addressable
-2. **Comms over memory** — use SendMessage for real-time coordination, memory for persistence
-3. **Pipeline prompts** — tell each agent WHO to message next and WHAT to send
-4. **Spawn all at once** — all Task calls in ONE message with `run_in_background: true`
-5. **Don't poll** — agents message back when done; wait for task completion notifications
-6. **Graceful shutdown** — send `{ type: "shutdown_request" }` before TeamDelete
-7. **Lead synthesizes** — when agents complete, review ALL results before responding to user
+1. **Always name agents** — `name: "role-name"` so the lead can address them even though they can't address each other
+2. **Memory as bus, SendMessage only lead→subagent** — never subagent→subagent
+3. **Verify upstream outputs in memory before spawning downstream** — don't tell agents to wait
+4. **Include the degraded-mode paragraph in every subagent brief** — it's load-bearing
+5. **Spawn ALL agents in ONE message** with `run_in_background: true` when they're a parallel batch
+6. **Don't poll** — completion notifications arrive as task results; trust the harness
+7. **Graceful shutdown** — `SendMessage({ to, message: { type: "shutdown_request" } })` from lead before TeamDelete
+8. **Lead synthesizes** — when agents complete, read outputs from memory and review ALL of them before responding
 
 ## V3 Hooks System (17 Hooks + 12 Workers)
 

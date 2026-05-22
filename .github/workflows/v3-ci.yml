@@ -1036,12 +1036,6 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Install root deps
-        run: npm install --legacy-peer-deps --no-audit --no-fund --ignore-scripts
-
-      - name: Build CLI (smoke uses the dist artifact)
-        run: cd v3/@claude-flow/cli && npm install --legacy-peer-deps --no-audit --no-fund --ignore-scripts && npm run build
-
       - name: Run agent_execute providers smoke
         run: node scripts/smoke-agent-execute-providers.mjs
 

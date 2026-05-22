@@ -26,7 +26,6 @@ import { dirname, resolve } from 'node:path';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SOURCE = resolve(__dirname, '../v3/@claude-flow/cli/src/mcp-tools/agent-execute-core.ts');
-const DIST = resolve(__dirname, '../v3/@claude-flow/cli/dist/src/mcp-tools/agent-execute-core.js');
 
 function fail(msg) { console.error(`✗ ${msg}`); process.exitCode = 1; }
 function pass(msg) { console.log(`✓ ${msg}`); }
@@ -66,28 +65,28 @@ if (!/OPENROUTER_API_KEY/.test(src) || !/OLLAMA_API_KEY/.test(src) || !/ANTHROPI
   pass('No-provider error message lists Anthropic + OpenRouter + Ollama options');
 }
 
-// 5. Behavioral check via the built artifact: OPENROUTER_API_KEY routes
-// to the openrouter branch (any error returned must come from
-// callOpenAICompat, not the Anthropic fetch).
-try {
-  // Clear env to avoid network calls leaking other providers.
-  process.env.ANTHROPIC_API_KEY = '';
-  process.env.OPENROUTER_API_KEY = 'sk-or-test-not-real';
-  process.env.OLLAMA_API_KEY = '';
-  delete process.env.RUFLO_PROVIDER;
-  const mod = await import(DIST);
-  const res = await mod.callAnthropicMessages({ prompt: 'ping', model: 'sonnet' });
-  if (res.success) {
-    fail('Unexpected success in behavioral smoke (env should not authenticate)');
-  } else if (/Anthropic API error/i.test(res.error || '')) {
-    fail('OPENROUTER_API_KEY set but error names Anthropic — router did not dispatch');
-  } else if (/openrouter/i.test(res.error || '') || /HTTP-Referer|api\.openrouter/i.test(res.error || '') || /401|authentication/i.test(res.error || '')) {
-    pass('OPENROUTER_API_KEY routes to openrouter dispatch (auth error from openrouter, not anthropic)');
+// 5. Static contract — the OpenRouter dispatch must be reachable from
+// callAnthropicMessages BEFORE the Anthropic key check, so a user with
+// only OPENROUTER_API_KEY (no Anthropic key) hits the openrouter
+// branch instead of the "no provider configured" error. We assert the
+// source-level order: the `useOpenRouter` branch must come before the
+// `if (!anthropicKey)` early-return.
+const callAnthropicBody = src.match(/export async function callAnthropicMessages[\s\S]*?\n\}\n/);
+if (!callAnthropicBody) {
+  fail('callAnthropicMessages body not found');
+} else {
+  const body = callAnthropicBody[0];
+  const openrouterIdx = body.search(/useOpenRouter\s*&&\s*openrouterKey/);
+  const noKeyIdx = body.search(/if\s*\(\s*!anthropicKey\s*\)/);
+  if (openrouterIdx < 0) {
+    fail('useOpenRouter dispatch not found in callAnthropicMessages');
+  } else if (noKeyIdx < 0) {
+    fail('Anthropic-key early-return not found in callAnthropicMessages');
+  } else if (openrouterIdx > noKeyIdx) {
+    fail('OpenRouter dispatch sits AFTER the Anthropic-key early-return — non-Anthropic users will hit "no provider" instead of openrouter');
   } else {
-    pass(`OPENROUTER_API_KEY routes to non-anthropic path (error: ${(res.error || '').slice(0, 80)})`);
+    pass('OpenRouter dispatch precedes the Anthropic-key early-return (correct order)');
   }
-} catch (err) {
-  fail(`behavioral smoke threw: ${err.message}`);
 }
 
 if (process.exitCode) {

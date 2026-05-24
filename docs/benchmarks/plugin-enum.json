@@ -1,6 +1,6 @@
 {
   "tag": "plugin-enum",
-  "capturedAt": "2026-05-24T21:57:44.417Z",
+  "capturedAt": "2026-05-24T22:00:04.492Z",
   "platform": "darwin-arm64",
   "node_version": "v22.22.1",
   "framework": "ruflo",
@@ -13,25 +13,25 @@
   },
   "results": {
     "without_plugins": {
-      "medianMs": 0.132,
+      "medianMs": 0.127,
       "minMs": 0.122,
-      "maxMs": 0.154
+      "maxMs": 0.361
     },
     "with_21_native_plugins": {
-      "medianMs": 0.328,
-      "minMs": 0.3,
-      "maxMs": 0.459
+      "medianMs": 0.128,
+      "minMs": 0.125,
+      "maxMs": 0.135
     },
     "with_2_absent_plugins": {
-      "medianMs": 0.14,
-      "minMs": 0.132,
-      "maxMs": 0.173
+      "medianMs": 0.124,
+      "minMs": 0.119,
+      "maxMs": 0.266
     }
   },
   "analysis": {
-    "plugin_overhead_ms": 0.196,
-    "overhead_ratio": 2.48,
-    "overhead_pct": 148,
+    "plugin_overhead_ms": 0.001,
+    "overhead_ratio": 1.01,
+    "overhead_pct": 1,
     "verdict": "sub-1ms plugin overhead — all compose calls still complete in <1ms even with 21 plugins"
   }
 }

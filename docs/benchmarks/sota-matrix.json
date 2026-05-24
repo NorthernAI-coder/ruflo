@@ -1,9 +1,9 @@
 {
   "tag": "sota-matrix",
   "status": "verified-real-numbers",
-  "capturedAt": "2026-05-24T21:49:30.272Z",
+  "capturedAt": "2026-05-24T22:00:33.239Z",
   "platform": "darwin-arm64",
-  "notes": "Mode A only (stub LLM). All ruflo numbers use real WASM module (isAgentWasmAvailable=true). CrewAI single_turn and N_agent_parallel are proxied by instantiation overhead (LLM required for real dispatch — marked as lower bounds). See sota-workload-spec.md for full methodology.",
+  "notes": "Mode A only (stub LLM). All ruflo numbers use real WASM module (isAgentWasmAvailable=true). CrewAI single_turn and N_agent_parallel are proxied by instantiation overhead (LLM required for real dispatch — marked as lower bounds). Includes M10 speedups: manifest cache + isDestructiveTool fast-path.",
   "workload": {
     "N": 10,
     "K": 50,
@@ -22,29 +22,29 @@
       "K": 50,
       "T": 5,
       "trials": 7,
-      "capturedAt": "2026-05-24T21:49:22.296Z",
+      "capturedAt": "2026-05-24T22:00:25.097Z",
       "measurements": {
-        "cold_start_ms": 3.443,
-        "import_overhead_ms": 3.268,
+        "cold_start_ms": 3.934,
+        "import_overhead_ms": 3.735,
         "compose_K_tools": {
           "K": 50,
-          "medianMs": 0.294,
-          "minMs": 0.285,
-          "maxMs": 0.381
+          "medianMs": 0.351,
+          "minMs": 0.329,
+          "maxMs": 0.464
         },
         "single_turn_dispatch": {
-          "medianMs": 0.023,
-          "minMs": 0.016,
-          "maxMs": 0.162
+          "medianMs": 0.019,
+          "minMs": 0.017,
+          "maxMs": 0.16
         },
         "N_agent_parallel_dispatch": {
           "N": 10,
-          "wall_medianMs": 1.159,
-          "wall_minMs": 1.029,
-          "wall_maxMs": 1.629
+          "wall_medianMs": 1.399,
+          "wall_minMs": 1.379,
+          "wall_maxMs": 1.811
         },
-        "rss_peak_mb": 58.91,
-        "rss_baseline_mb": 54.27
+        "rss_peak_mb": 61.56,
+        "rss_baseline_mb": 54.31
       },
       "notes": "Mode A: wasm_agent_compose with MCP tool names only, no real LLM calls. single_turn uses createWasmAgent (keyless stub path) if WASM module available, else falls back to compose proxy. N-agent parallel uses Promise.all."
     },
@@ -59,30 +59,30 @@
       "K": 50,
       "T": 5,
       "trials": 7,
-      "capturedAt": "2026-05-24T21:49:26.536451Z",
+      "capturedAt": "2026-05-24T22:00:29.263058Z",
       "measurements": {
-        "cold_start_ms": 508.111,
-        "graph_compile_ms": 37.422,
-        "import_overhead_ms": 504.209,
+        "cold_start_ms": 534.008,
+        "graph_compile_ms": 37.924,
+        "import_overhead_ms": 531.549,
         "compose_K_tools": {
           "K": 50,
-          "medianMs": 34.782,
-          "minMs": 33.93,
-          "maxMs": 53.167
+          "medianMs": 37.971,
+          "minMs": 34.811,
+          "maxMs": 57.931
         },
         "single_turn_dispatch": {
-          "medianMs": 36.413,
-          "minMs": 34.93,
-          "maxMs": 60.577
+          "medianMs": 37.106,
+          "minMs": 35.333,
+          "maxMs": 61.941
         },
         "N_agent_parallel_dispatch": {
           "N": 10,
-          "wall_medianMs": 394.922,
-          "wall_minMs": 356.28,
-          "wall_maxMs": 467.458
+          "wall_medianMs": 392.478,
+          "wall_minMs": 368.503,
+          "wall_maxMs": 432.715
         },
-        "rss_peak_mb": 80.52,
-        "rss_baseline_mb": 77.23
+        "rss_peak_mb": 80.31,
+        "rss_baseline_mb": 77.12
       },
       "notes": "Mode A: pure-Python stub agent node (no LLM API calls). Uses StateGraph with stateless node that counts AIMessages in history. N-agent parallel uses ThreadPoolExecutor."
     },
@@ -97,29 +97,29 @@
       "K": 50,
       "T": 5,
       "trials": 7,
-      "capturedAt": "2026-05-24T21:49:27.496182Z",
+      "capturedAt": "2026-05-24T22:00:30.200120Z",
       "measurements": {
-        "cold_start_ms": 186.432,
-        "import_overhead_ms": 184.567,
+        "cold_start_ms": 185.175,
+        "import_overhead_ms": 183.249,
         "compose_K_tools": {
           "K": 50,
-          "medianMs": 6.516,
-          "minMs": 6.093,
-          "maxMs": 15.3
+          "medianMs": 5.925,
+          "minMs": 5.716,
+          "maxMs": 14.098
         },
         "single_turn_dispatch": {
-          "medianMs": 6.731,
-          "minMs": 6.434,
-          "maxMs": 7.054
+          "medianMs": 6.13,
+          "minMs": 5.9,
+          "maxMs": 6.525
         },
         "N_agent_parallel_dispatch": {
           "N": 10,
-          "wall_medianMs": 64.214,
-          "wall_minMs": 60.659,
-          "wall_maxMs": 100.758
+          "wall_medianMs": 61.115,
+          "wall_minMs": 59.221,
+          "wall_maxMs": 99.059
         },
-        "rss_peak_mb": 78.53,
-        "rss_baseline_mb": 57.52
+        "rss_peak_mb": 78.73,
+        "rss_baseline_mb": 57.69
       },
       "notes": "Mode A: stub model client (0ms delay), no real API calls. Uses asyncio.gather for parallel N-agent dispatch."
     },
@@ -134,31 +134,31 @@
       "K": 50,
       "T": 5,
       "trials": 7,
-      "capturedAt": "2026-05-24T21:49:29.836025Z",
+      "capturedAt": "2026-05-24T22:00:32.828648Z",
       "measurements": {
-        "cold_start_ms": 2239.658,
-        "import_overhead_ms": 2237.959,
+        "cold_start_ms": 2526.738,
+        "import_overhead_ms": 2525.031,
         "compose_K_tools": {
           "K": 50,
           "medianMs": 0.115,
-          "minMs": 0.107,
-          "maxMs": 0.202
+          "minMs": 0.108,
+          "maxMs": 0.207
         },
         "single_turn_dispatch": {
           "medianMs": 0.113,
-          "minMs": 0.106,
-          "maxMs": 0.122,
+          "minMs": 0.109,
+          "maxMs": 0.119,
           "note": "Proxy: agent instantiation overhead (CrewAI requires real LLM for kickoff — fake-LLM not supported without patching LiteLLM; Mode A measures setup cost only)"
         },
         "N_agent_parallel_dispatch": {
           "N": 10,
           "wall_medianMs": 0.114,
           "wall_minMs": 0.107,
-          "wall_maxMs": 0.174,
+          "wall_maxMs": 0.181,
           "note": "Proxy: crew instantiation for N agents (no kickoff — LLM would be required)"
         },
-        "rss_peak_mb": 264.05,
-        "rss_baseline_mb": 264
+        "rss_peak_mb": 265.69,
+        "rss_baseline_mb": 265.69
       },
       "notes": "Mode A partial: compose and agent-instantiation overhead measured without LLM calls. single_turn_dispatch and N_agent_parallel are proxied by agent+crew instantiation because CrewAI's kickoff() requires a real LLM provider. These numbers are LOWER bounds — actual dispatch would be higher. Labeled (proxy) in comparator matrix."
     }
@@ -166,55 +166,55 @@
   "errors": [],
   "comparison": {
     "cold_start_ms": {
-      "ruflo": 3.443,
-      "langgraph": 508.111,
-      "autogen": 186.432,
-      "crewai": 2239.658
+      "ruflo": 3.934,
+      "langgraph": 534.008,
+      "autogen": 185.175,
+      "crewai": 2526.738
     },
     "compose_50_tools_ms": {
-      "ruflo": 0.294,
-      "langgraph": 34.782,
-      "autogen": 6.516,
+      "ruflo": 0.351,
+      "langgraph": 37.971,
+      "autogen": 5.925,
       "crewai": 0.115
     },
     "single_turn_ms": {
-      "ruflo": 0.023,
-      "langgraph": 36.413,
-      "autogen": 6.731,
+      "ruflo": 0.019,
+      "langgraph": 37.106,
+      "autogen": 6.13,
       "crewai": 0.113
     },
     "N10_parallel_ms": {
-      "ruflo": 1.159,
-      "langgraph": 394.922,
-      "autogen": 64.214,
+      "ruflo": 1.399,
+      "langgraph": 392.478,
+      "autogen": 61.115,
       "crewai": 0.114
     },
     "rss_peak_mb": {
-      "ruflo": 58.91,
-      "langgraph": 80.52,
-      "autogen": 78.53,
-      "crewai": 264.05
+      "ruflo": 61.56,
+      "langgraph": 80.31,
+      "autogen": 78.73,
+      "crewai": 265.69
     }
   },
   "winner_by_dimension": {
     "cold_start_ms": {
       "winner": "ruflo",
-      "value": 3.443,
+      "value": 3.934,
       "runners_up": [
         {
           "fw": "autogen",
-          "v": 186.432,
-          "ratio": 54.15
+          "v": 185.175,
+          "ratio": 47.07
         },
         {
           "fw": "langgraph",
-          "v": 508.111,
-          "ratio": 147.58
+          "v": 534.008,
+          "ratio": 135.74
         },
         {
           "fw": "crewai",
-          "v": 2239.658,
-          "ratio": 650.5
+          "v": 2526.738,
+          "ratio": 642.28
         }
       ]
     },
@@ -224,39 +224,39 @@
       "runners_up": [
         {
           "fw": "ruflo",
-          "v": 0.294,
-          "ratio": 2.56
+          "v": 0.351,
+          "ratio": 3.05
         },
         {
           "fw": "autogen",
-          "v": 6.516,
-          "ratio": 56.66
+          "v": 5.925,
+          "ratio": 51.52
         },
         {
           "fw": "langgraph",
-          "v": 34.782,
-          "ratio": 302.45
+          "v": 37.971,
+          "ratio": 330.18
         }
       ]
     },
     "single_turn_ms": {
       "winner": "ruflo",
-      "value": 0.023,
+      "value": 0.019,
       "runners_up": [
         {
           "fw": "crewai",
           "v": 0.113,
-          "ratio": 4.91
+          "ratio": 5.95
         },
         {
           "fw": "autogen",
-          "v": 6.731,
-          "ratio": 292.65
+          "v": 6.13,
+          "ratio": 322.63
         },
         {
           "fw": "langgraph",
-          "v": 36.413,
-          "ratio": 1583.17
+          "v": 37.106,
+          "ratio": 1952.95
         }
       ]
     },
@@ -266,39 +266,39 @@
       "runners_up": [
         {
           "fw": "ruflo",
-          "v": 1.159,
-          "ratio": 10.17
+          "v": 1.399,
+          "ratio": 12.27
         },
         {
           "fw": "autogen",
-          "v": 64.214,
-          "ratio": 563.28
+          "v": 61.115,
+          "ratio": 536.1
         },
         {
           "fw": "langgraph",
-          "v": 394.922,
-          "ratio": 3464.23
+          "v": 392.478,
+          "ratio": 3442.79
         }
       ]
     },
     "rss_peak_mb": {
       "winner": "ruflo",
-      "value": 58.91,
+      "value": 61.56,
       "runners_up": [
         {
           "fw": "autogen",
-          "v": 78.53,
-          "ratio": 1.33
+          "v": 78.73,
+          "ratio": 1.28
         },
         {
           "fw": "langgraph",
-          "v": 80.52,
-          "ratio": 1.37
+          "v": 80.31,
+          "ratio": 1.3
         },
         {
           "fw": "crewai",
-          "v": 264.05,
-          "ratio": 4.48
+          "v": 265.69,
+          "ratio": 4.32
         }
       ]
     }

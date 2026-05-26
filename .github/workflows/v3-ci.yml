@@ -1842,6 +1842,23 @@ jobs:
         shell: bash
         run: node scripts/audit-vector-dim.mjs
 
+  no-default-export-audit:
+    name: No-default-export leak guard (#2141)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Audit for unexpected export default (#2141)
+        shell: bash
+        run: node scripts/audit-no-default-export-leak.mjs
+
   witness-verify:
     # Cryptographic regression guard: runs `ruflo verify --manifest` against
     # the local build to confirm every documented fix in verification.md.json
@@ -1868,7 +1885,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-    needs: [smoke-install-no-bsqlite, plugin-hooks-smoke, pre-bash-hook-smoke, witness-verify-precondition-smoke, witness-marker-drift-smoke, browser-rvf-create-flags-smoke, mcp-protocol-smoke, memory-import-smoke, tool-descriptions-audit, mcp-roundtrip-smoke, plugin-package-audit, cli-npx-install-smoke, hook-command-audit, vector-dim-audit, windows-hook-shim-smoke, windows-init-hooks-smoke, windows-hook-execution-smoke]
+    needs: [smoke-install-no-bsqlite, plugin-hooks-smoke, pre-bash-hook-smoke, witness-verify-precondition-smoke, witness-marker-drift-smoke, browser-rvf-create-flags-smoke, mcp-protocol-smoke, memory-import-smoke, tool-descriptions-audit, mcp-roundtrip-smoke, plugin-package-audit, cli-npx-install-smoke, hook-command-audit, vector-dim-audit, no-default-export-audit, windows-hook-shim-smoke, windows-init-hooks-smoke, windows-hook-execution-smoke]
 
     steps:
       - name: Checkout code

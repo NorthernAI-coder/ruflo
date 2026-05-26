@@ -126,5 +126,8 @@
   "publishConfig": {
     "access": "public",
     "tag": "latest"
+  },
+  "overrides": {
+    "protobufjs": ">=7.5.6"
   }
 }

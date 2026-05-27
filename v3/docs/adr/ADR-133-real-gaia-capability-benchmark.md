@@ -1,9 +1,79 @@
 # ADR-133 — Real GAIA Capability Benchmark Architecture
 
-**Status**: Proposed
-**Date**: 2026-05-27
+**Status**: Partially Implemented (vanilla harness shipped; ruflo-intelligence integration deferred to ADR-134)
+**Date**: 2026-05-27 (proposed); **Updated**: 2026-05-27 (post-implementation amendment after 24-iter /loop pursuit)
 **Authors**: claude (capability-bench follow-up, 2026-05-27)
-**Related**: ADR-088 (LongMemEval Benchmark), ADR-132 (Simulative Planning Router, on `dream/2026-05-27-intelligence`), ADR-026 (3-tier model routing), #2156 (Dream Cycle 2026-05-27 capabilities scan)
+**Related**: ADR-088 (LongMemEval Benchmark), ADR-132 (Simulative Planning Router, acceptance gate measured −78.2%), ADR-026 (3-tier model routing), #2156 (Dream Cycle 2026-05-27 capabilities scan), ADR-134 (planned: ruflo-native GAIA agent integration)
+
+---
+
+## Implementation Status (2026-05-27, post-/loop)
+
+After ~24 iterations of a 5-minute /loop driven by horizon-tracker, the architecture proposed below is **substantially implemented** with the following deviations from the original 7-PR roadmap:
+
+| Original PR | Status | Actual delivery |
+|---|---|---|
+| PR1 — `gaia-loader.ts` + `HF_TOKEN` | ✅ Shipped (iter 1) | Commit `189f9020e` in PR #2165 |
+| PR2 — `gaia-tools/` skeleton | ✅ Shipped (iter 2) | Commit `6b48a9491` in PR #2165 |
+| PR3 — `gaia-agent.ts` multi-turn loop | ✅ Shipped (iter 4) | Commit `0d9c64f64` in PR #2165 |
+| PR4 — `python_exec` sandbox | ✅ Shipped (iter 19) | PR #2169 — **local Python subprocess** (Path B; E2B not available, security disclosure included) |
+| PR5 — `web_browse` + `image_describe` | ✅ Shipped (iter 20) | PR #2170 — Playwright **lazy-loaded** via string-concat to avoid 80MB install in base path; vision via Anthropic Messages API |
+| PR6 — `gaia-judge.ts` LLM-as-judge | ✅ Shipped (iter 5) | Commit `a5d86df50` in PR #2165, plus iter 15 judge-normalization fix + iter 11 unit-aware comparison |
+| PR7 — CI wiring | ✅ Shipped (iter 6) | PR #2166 — `gaia-benchmark.yml` + smoke |
+
+Plus follow-up PRs discovered during the SOTA-pursuit phase:
+- **PR #2171** (iter 21) — `web_search` 3-backend fallback (Wikipedia primary, Brave secondary, DDG tertiary). The original DDG-only scraper was 100% TCP-blocked from the dev env; iter 15's baseline was measured with effectively zero web search.
+- **PR #2172** (iter 22) — Agent loop quality: empty-tool-result hint injection, multi-pattern answer extraction (4-pattern cascade), anti-surrender system prompt, tool error recovery hints. Original loop had a single `FINAL_ANSWER:` regex.
+- **gaia-bench CLI entry** (iter 4 follow-up + iter 12 schema fix) — `commands/gaia-bench.ts` matching PR7's locked workflow contract; loader truncation bug fixed to recover all 53 L1 questions from `2023_level1` config (was truncating to 30 via `length=100` on `2023_all`).
+
+### Measured Baseline (iter 15, pre-SOTA-pursuit)
+
+First real GAIA Level-1 measurement against the actual Hugging Face validation split (53 questions):
+
+| Model | Pass Rate | Cost | Mean Turns | vs HAL Sonnet 4.5 (74.6% full L1) |
+|---|---|---|---|---|
+| claude-haiku-4-5 | 8/53 (15.1%) | $0.07 | 3.0 | — |
+| claude-sonnet-4-6 | 5/53 (9.4%) | $1.27 | 4.4 | −65pp |
+
+**Honest caveat**: this baseline was measured with `web_search` returning 100% timeouts (Case D / TCP block discovered in iter 21). Effectively measures "Sonnet 4.6 alone with file_read only" — not the intended harness configuration. Failure decomposition: Sonnet 79% null returns, Haiku 38% "I don't know" — both driven primarily by the broken search tool.
+
+### Consolidated Measurement (iter 23, post-SOTA-pursuit)
+
+After PR4+PR5+PR #2171+PR #2172 cherry-picked into meta-branch `bench/adr-133-sota-meta` (in flight as of this ADR amendment). Result will be backfilled into a follow-up update once iter 23 posts its headline numbers to PR #2165.
+
+---
+
+## Known Limitation: Ruflo Intelligence Integration Gap
+
+**The current GAIA harness uses ruflo's CLI infrastructure but does NOT use ruflo's intelligence stack inside the agent loop.** `gaia-agent.ts` calls `https://api.anthropic.com/v1/messages` directly via raw `fetch`. It exercises:
+
+✅ AgentDB / HNSW (via `findSimilarPatterns` in `--suite agent`, not in the GAIA loop)
+✅ SONA short-term recording (same — control plane only)
+✅ Q-Learning router (same — control plane only)
+✅ horizon-tracker memory (this loop's iteration checkpoints)
+
+❌ ADR-132 SimulativePlanningRouter (built, measured at −78.2% token reduction, but not wired into `gaia-agent.ts`)
+❌ ADR-026 3-tier model routing (GAIA explicitly picks Haiku/Sonnet via flags)
+❌ SONA pattern learning across GAIA runs (failures aren't distilled into avoidance patterns)
+❌ Pre-task / post-task / route hooks (loop doesn't fire them)
+❌ 4-step intelligence pipeline (RETRIEVE→JUDGE→DISTILL→CONSOLIDATE) — judge is in-loop but no consolidation across runs
+❌ `agentic-flow` swarm coordination — single-agent harness
+❌ MoE expert routing, Hive-mind, EWC++ — all unused
+
+What we built is **a GAIA harness IN ruflo, not OF ruflo**. The 9.4% Sonnet baseline (and forthcoming iter-23 consolidated number) measures "what raw Sonnet 4.6 + N tools + decent agent loop can do" — not "what ruflo's intelligence stack can do for an agent."
+
+### Path Forward: ADR-134 (planned)
+
+To legitimately leverage ruflo's intelligence stack, file **ADR-134 — Ruflo-Native GAIA Agent: Intelligence Stack Integration**. Estimated integrations and lift:
+
+| Integration | Estimated L1 lift | Effort |
+|---|---|---|
+| Wire ADR-132 SimulativePlanningRouter into agent loop | +3-8pp (token efficiency + multi-step planning) | 1 day |
+| SONA pattern learning across GAIA runs (store successful trajectories, retrieve for similar questions) | +5-10pp (compound across runs) | 1-2 days |
+| Hook integration (pre-task evaluates question, route picks tools, post-task records outcome) | +5-15pp | 2-3 days |
+| `agentic-flow` swarm coordination on hard questions | +10-20pp (research territory) | 3-5 days |
+
+This integration track is **the honest path to differentiated SOTA** — not "we have an OK agent harness" but "ruflo's intelligence stack measurably moves the needle on agent benchmarks."
 
 ---
 

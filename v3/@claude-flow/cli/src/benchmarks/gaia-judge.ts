@@ -147,7 +147,7 @@ function resolveApiKey(supplied?: string): string {
 
   try {
     const out = execSync(
-      'gcloud secrets versions access latest --secret=anthropic-api-key 2>/dev/null',
+      'gcloud secrets versions access latest --secret=ANTHROPIC_API_KEY 2>/dev/null',
       { encoding: 'utf-8', timeout: 10_000 },
     ).trim();
     if (out) return out;
@@ -157,7 +157,7 @@ function resolveApiKey(supplied?: string): string {
 
   throw new Error(
     'ANTHROPIC_API_KEY not found.  Set the env var or store it in GCP Secret Manager under ' +
-    '"anthropic-api-key".',
+    '"ANTHROPIC_API_KEY".',
   );
 }
 

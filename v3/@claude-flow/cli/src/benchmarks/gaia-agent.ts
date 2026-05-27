@@ -17,7 +17,7 @@
  * API key resolution order (mirrors resolveHfToken from gaia-loader.ts):
  *   1. `options.apiKey` (caller-supplied)
  *   2. `ANTHROPIC_API_KEY` env var
- *   3. `gcloud secrets versions access latest --secret=anthropic-api-key`
+ *   3. `gcloud secrets versions access latest --secret=ANTHROPIC_API_KEY`
  *
  * Cost discipline: smoke runs use `claude-haiku-4-5` only.  The smoke
  * runner at the bottom of this file enforces that model.
@@ -105,7 +105,7 @@ export interface GaiaAgentOptions {
  * Resolution order:
  *   1. Caller-supplied `apiKey`
  *   2. `ANTHROPIC_API_KEY` env var
- *   3. `gcloud secrets versions access latest --secret=anthropic-api-key`
+ *   3. `gcloud secrets versions access latest --secret=ANTHROPIC_API_KEY`
  *
  * Throws with a clear message if none of the above is available.
  */
@@ -117,7 +117,7 @@ export function resolveAnthropicApiKey(apiKey?: string): string {
 
   try {
     const out = execSync(
-      'gcloud secrets versions access latest --secret=anthropic-api-key 2>/dev/null',
+      'gcloud secrets versions access latest --secret=ANTHROPIC_API_KEY 2>/dev/null',
       { encoding: 'utf-8', timeout: 10_000 },
     ).trim();
     if (out) return out;
@@ -127,7 +127,7 @@ export function resolveAnthropicApiKey(apiKey?: string): string {
 
   throw new Error(
     'ANTHROPIC_API_KEY not found.  Set the env var or store it in GCP Secret Manager under ' +
-    '"anthropic-api-key" (e.g. `echo -n "$KEY" | gcloud secrets versions add anthropic-api-key --data-file=-`).',
+    '"ANTHROPIC_API_KEY" (e.g. `echo -n "$KEY" | gcloud secrets versions add ANTHROPIC_API_KEY --data-file=-`).',
   );
 }
 

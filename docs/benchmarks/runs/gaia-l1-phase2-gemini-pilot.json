@@ -1,0 +1,78 @@
+{
+  "pilot": "phase2-gemini-thinking",
+  "model": "gemini-2.5-pro",
+  "timestamp": "2026-05-28T12:40:55.413Z",
+  "summary": {
+    "passed": 2,
+    "total": 5,
+    "passRate": "40.0",
+    "avgCostUsd": 0.027046999999999998,
+    "totalCostUsd": 0.135235,
+    "totalInputTokens": 34332,
+    "totalOutputTokens": 1072,
+    "totalThinkingTokens": 8160,
+    "costGate": {
+      "threshold": 0.12,
+      "value": 0.027046999999999998,
+      "passed": true
+    },
+    "passRateGate": {
+      "threshold": 3,
+      "value": 2,
+      "passed": false
+    },
+    "bothGatesPass": false
+  },
+  "questions": [
+    {
+      "taskId": "9318445f-fe6a-4e1b-acbf-c68228c9906a",
+      "correct": false,
+      "answer": "1/2,1/4,3/4,1/2,1/4,2/4,3/4,3/4,2/4,2/4,1/4",
+      "expected": "3/4,1/4,3/4,3/4,2/4,1/2,5/35,7/21,30/5,30/5,3/4,1/15,1/3,4/9,1/8,32/23,103/170",
+      "cost": 0.00553125,
+      "turns": 1,
+      "thinkingTokens": 427,
+      "wallMs": 5183
+    },
+    {
+      "taskId": "7bd855d8-463d-4ed5-93ca-5fe35145f733",
+      "correct": false,
+      "answer": "I am unable to access the provided Excel file to calculate the total sales.",
+      "expected": "89706.00",
+      "cost": 0.05172375,
+      "turns": 9,
+      "thinkingTokens": 3938,
+      "wallMs": 48277
+    },
+    {
+      "taskId": "5188369a-3bbe-43d8-8b94-11558f909a08",
+      "correct": false,
+      "answer": null,
+      "expected": "Annie Levin",
+      "cost": 0.04305875,
+      "turns": 11,
+      "thinkingTokens": 2101,
+      "wallMs": 45046
+    },
+    {
+      "taskId": "5d0080cb-90d7-4712-bc33-848150e917d3",
+      "correct": true,
+      "answer": "0.1777",
+      "expected": "0.1777",
+      "cost": 0.011533749999999999,
+      "turns": 4,
+      "thinkingTokens": 615,
+      "wallMs": 15347
+    },
+    {
+      "taskId": "840bfca7-4f7b-481a-8794-c560c340185d",
+      "correct": true,
+      "answer": "80GSFC21M0002",
+      "expected": "80GSFC21M0002",
+      "cost": 0.0233875,
+      "turns": 8,
+      "thinkingTokens": 1079,
+      "wallMs": 31687
+    }
+  ]
+}

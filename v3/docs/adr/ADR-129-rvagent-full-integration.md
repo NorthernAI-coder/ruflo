@@ -1,6 +1,6 @@
 # ADR-129 — `@ruvector/rvagent-wasm` Full Integration: JsModelProvider, RVF Composer, Gallery CRUD, and Plugin Bridge
 
-**Status**: Proposed (2026-05-24)
+**Status**: Accepted — Implemented in v3.8.0 (2026-05-27)
 **Date**: 2026-05-24
 **Authors**: claude (drafted with rUv)
 **Related**: ADR-115 (rvagent / Managed Agents two-runtime architecture), ADR-026 (3-tier model routing), ADR-112 (MCP tool discoverability), ADR-118 (AIDefence 2.3.0), ADR-126 (neural-trader substrate integration), ADR-127 (GitHub stack modernization), issues #2042 (provider routing fix), #1810 (model pin regression)
@@ -195,3 +195,26 @@ The contract is intentionally minimal: plugins opt in by adding the `"rvagent"` 
 Phases 1 and 2 are the highest-value and lowest-risk changes. They should be landed as a single PR (one diff, two logical units, one smoke batch) to minimize review overhead. Phase 3 can follow as a separate PR — it is additive surface expansion with no changes to existing tools. Phase 4 is lowest priority and can slip to 3.9.0 if the plugin.json contract needs broader community input.
 
 Target: Phases 1–3 in `3.8.0` (next minor). Phase 4 in `3.8.0` if capacity allows, else `3.9.0`.
+
+## Implementation record (v3.8.0 — 2026-05-24)
+
+All four phases shipped in a single PR (#2123, merged 2026-05-24). Release v3.8.0 tagged same day.
+
+### Gap 2 implementation summary (Phase 2)
+
+**Files changed**:
+- `v3/@claude-flow/cli/src/ruvector/agent-wasm.ts` — `buildRvfContainer` gains `mcpTools?: McpToolDescriptor[]`; calls `builder.addMcpTools(JSON.stringify(mcpTools))`. `buildRvfFromTemplate` now passes `template.mcp_tools` (was silently dropped).
+- `v3/@claude-flow/cli/src/mcp-tools/wasm-agent-tools.ts` — `wasm_agent_compose` MCP tool added with full `DESTRUCTIVE_TOOL_PATTERNS` gate, `SAFE_MCP_TOOLS` allowlist (28 tools), `mcpToolsAllowDestructive` opt-in flag, and `includePlugins` for Phase 4 plugin wiring.
+
+**Smoke results (smoke-wasm-rvf-compose.mjs)**: 7/7 PASS
+1. `wasm_agent_compose` tool registered
+2. `mcpToolsAllowDestructive` gate present
+3. `DESTRUCTIVE_TOOL_PATTERNS` defined
+4. `buildRvfFromTemplate` passes `mcp_tools` (silent drop fixed)
+5. `buildRvfContainer` calls `builder.addMcpTools()` (314-tool bridge wired)
+6. `includePlugins` param present (Phase 4 plugin bridge)
+7. Destructive pattern guards cover `memory_delete`, `federation_*`, `swarm_shutdown`, `agent_terminate`
+
+**Backward compat**: `wasm_agent_create` and `wasm_agent_prompt` unaffected — `mcpTools` parameter is optional with empty-array default. Existing agents with no `mcp_tools` field continue to work identically.
+
+**MCP tools accessible to WASM agents**: 314 (full ruflo surface, gated by allowlist)

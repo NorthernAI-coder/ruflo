@@ -568,6 +568,13 @@ export async function bridgeStoreEntry(options: {
     const id = generateId('entry');
     const now = Date.now();
 
+    // #2245 — record the activity so signalsProcessed stops being a dead
+    // zero. Fire-and-forget; never blocks the write path.
+    try {
+      const intel = await import('./intelligence.js');
+      intel.recordSignalProcessed();
+    } catch { /* intelligence module not yet initialised */ }
+
     // Phase 5: MutationGuard validation before write
     const guardResult = await guardValidate(registry, 'store', { key, namespace, size: value.length });
     if (!guardResult.allowed) {

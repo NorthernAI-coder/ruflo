@@ -1649,8 +1649,13 @@ export const hooksPretrain: MCPTool = {
     scan(repoPath, 0);
     const elapsed = Math.round(performance.now() - startTime);
 
-    // Store extracted patterns in AgentDB
-    let patternsStored = 0;
+    // Persist extracted patterns. Two stores get written so the user can find
+    // them where they expect:
+    //   1. memory-bridge `pretrain` namespace — one summary bundle
+    //   2. neural store — one row PER pattern so `neural_patterns list` reflects them
+    // #2245 — without (2), the dashboards reported "0 patterns" after pretrain.
+    let patternsBundled = 0;
+    let patternsIndexed = 0;
     try {
       const bridge = await import('../memory/memory-bridge.js');
       await bridge.bridgeStoreEntry({
@@ -1659,8 +1664,23 @@ export const hooksPretrain: MCPTool = {
         namespace: 'pretrain',
         tags: ['pretrain', depth],
       });
-      patternsStored = patterns.length;
+      patternsBundled = patterns.length;
     } catch { /* AgentDB not available */ }
+
+    try {
+      const neural = await import('./neural-tools.js');
+      const items = patterns.map((p) => ({
+        name: p.length > 200 ? p.slice(0, 200) : p,
+        type: 'import-pattern',
+        content: p,
+        metadata: { source: 'hooks_pretrain', depth },
+      }));
+      const result = await neural.storeNeuralPatterns(items);
+      patternsIndexed = result.stored;
+    } catch { /* neural store unavailable */ }
+
+    // Back-compat field
+    const patternsStored = patternsBundled;
 
     // #1847: when the corpus contains files but no patterns were extracted
     // (typical for Markdown vaults), make the source-code-only extraction
@@ -1687,13 +1707,20 @@ export const hooksPretrain: MCPTool = {
         filesAnalyzed,
         totalLines,
         patternsExtracted: patterns.length,
-        patternsStored,
+        patternsBundled,                  // #2245: 1 summary row in memory-bridge `pretrain` namespace
+        patternsIndexed,                  // #2245: per-pattern rows in neural store — surfaced by neural_patterns list
+        patternsStored,                   // back-compat alias for patternsBundled
         fileTypes: Object.entries(extCounts).sort((a, b) => b[1] - a[1]).slice(0, 15).map(([ext, count]) => ({ ext, count })),
         // #1847: explicit extraction contract so callers can tell pretrain
         // patterns apart from live trajectories and hook statusline state.
+        // #2245: also call out exactly which stores got written.
         sources: {
           extractedFrom: SUPPORTED_EXTRACTION_EXTS,
           scope: 'pretrain-only (live trajectories + statusline are tracked separately)',
+          stores: {
+            'memory-bridge:pretrain': patternsBundled > 0 ? 1 : 0, // one bundle row
+            'neural-store (neural_patterns list)': patternsIndexed,
+          },
         },
       },
       ...(note ? { note } : {}),
@@ -4339,7 +4366,7 @@ export const hooksTeammateIdle: MCPTool = {
 
 export const hooksTaskCompleted: MCPTool = {
   name: 'hooks_task-completed',
-  description: 'Agent Teams hook — fired when a task is marked complete; records completion and (eventually) trains patterns + notifies the team lead. Use when native TodoWrite is wrong because the work was a persisted, agent-assigned task whose outcome should feed cross-session learning and team coordination. For an in-session checklist tick, native TodoWrite is fine. (Pattern-learning is delegated to the intelligence pipeline — this records the completion today.)',
+  description: 'Agent Teams hook — fired when a task is marked complete. Records the completion and, when `trainPatterns:true`, feeds the outcome to the SONA + EWC++ learning pipeline (the same path used by hooks_intelligence trajectory-*). Multiple ways to drive learning exist: (a) call this with trainPatterns:true for a one-step trajectory, (b) use hooks_intelligence trajectory-start/step/end for richer multi-step learning, (c) just record an episode via memory_store if no learning is needed. Each path is honest about what it persists; check the returned `learningPath` field.',
   category: 'hooks',
   inputSchema: {
     type: 'object',
@@ -4348,21 +4375,77 @@ export const hooksTaskCompleted: MCPTool = {
       teammateId: { type: 'string', description: 'Teammate that completed it' },
       success: { type: 'boolean', description: 'Whether the task succeeded' },
       quality: { type: 'number', description: 'Quality score 0-1' },
-      trainPatterns: { type: 'boolean', description: 'Feed the outcome to the learning pipeline' },
+      trainPatterns: { type: 'boolean', description: 'When true, runs the SONA + EWC++ trajectory pipeline on this completion so globalStats.patternsLearned reflects it. When false (default), only records the completion.' },
       notifyLead: { type: 'boolean', description: 'Notify the team lead' },
+      content: { type: 'string', description: 'Optional richer task description; used as the trajectory step content when training. Defaults to the taskId.' },
     },
     required: ['taskId'],
   },
   handler: async (input) => {
     const taskId = String(input.taskId ?? '');
-    const quality = typeof input.quality === 'number' ? input.quality : (input.success === false ? 0 : 1);
+    const success = input.success !== false;
+    const quality = typeof input.quality === 'number' ? input.quality : (success ? 1 : 0);
+    const trainPatterns = input.trainPatterns === true;
+    const teammateId = input.teammateId ? String(input.teammateId) : undefined;
+    // #2241 (OWASP ASI06 Memory/Context Poisoning) — task content is user-
+    // supplied and feeds the SONA learning model. Cap length, strip control
+    // chars, and reject obvious prompt-injection sentinels before training.
+    const rawContent = typeof input.content === 'string' && input.content.trim()
+      ? String(input.content)
+      : `Task ${taskId} completed (quality=${quality.toFixed(2)})`;
+    const content = rawContent
+      // Strip ASCII control chars except newline/tab.
+      .replace(/[\x00-\x08\x0B-\x1F\x7F]/g, '')
+      // Cap to 4 KB — way over a typical trajectory step, well under a memory bomb.
+      .slice(0, 4096);
+
+    let patternsLearned = 0;
+    let trajectoriesRecorded = 0;
+    let learningPath: 'trajectory-pipeline' | 'recorded-only' = 'recorded-only';
+    let learningError: string | undefined;
+
+    if (trainPatterns) {
+      // #2245 — actually feed the learning loop. Synthesize a one-step
+      // trajectory from {taskId, success, quality} and run it through the
+      // same SONA + EWC + globalStats++ path as hooks_intelligence trajectory-end.
+      try {
+        const intel = await import('../memory/intelligence.js');
+        const before = intel.getIntelligenceStats();
+        await intel.recordTrajectory(
+          [{
+            type: 'result',
+            content,
+            metadata: { taskId, success, quality, teammateId },
+            timestamp: Date.now(),
+          }],
+          success ? 'success' : 'failure',
+        );
+        const after = intel.getIntelligenceStats();
+        patternsLearned = Math.max(0, after.patternsLearned - before.patternsLearned);
+        trajectoriesRecorded = Math.max(0, after.trajectoriesRecorded - before.trajectoriesRecorded);
+        learningPath = 'trajectory-pipeline';
+      } catch (err) {
+        learningError = (err as Error).message;
+        // Fall back to recorded-only — be honest about it.
+      }
+    }
+
+    const note = trainPatterns
+      ? (learningPath === 'trajectory-pipeline'
+        ? `Trained via SONA + EWC++ trajectory pipeline (verdict=${success ? 'success' : 'failure'}, patternsLearned=${patternsLearned}, trajectoriesRecorded=${trajectoriesRecorded}).`
+        : `trainPatterns=true but the trajectory pipeline failed (${learningError ?? 'unknown error'}). Completion recorded only.`)
+      : 'Completion recorded only. Pass trainPatterns:true (or use hooks_intelligence trajectory-* directly) to feed the learning loop.';
+
     return {
       success: true,
       taskId,
-      patternsLearned: 0,
+      patternsLearned,
+      trajectoriesRecorded,
+      learningPath,                  // 'trajectory-pipeline' | 'recorded-only'
       leadNotified: input.notifyLead === true,
-      metrics: { duration: 0, quality, learningUpdates: 0 },
-      note: 'completion recorded; pattern-learning is delegated to the intelligence pipeline (#1916 follow-up)',
+      metrics: { duration: 0, quality, learningUpdates: patternsLearned },
+      ...(learningError ? { learningError } : {}),
+      note,
     };
   },
 };

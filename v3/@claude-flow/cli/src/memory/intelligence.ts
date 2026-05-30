@@ -776,7 +776,12 @@ function loadPersistedStats(): void {
     if (existsSync(path)) {
       const data = JSON.parse(readFileSync(path, 'utf-8'));
       if (data && typeof data === 'object') {
+        // #2245: previously only restored trajectoriesRecorded — patternsLearned
+        // and signalsProcessed reset to zero on every restart, masking real
+        // learning progress in the dashboards.
         globalStats.trajectoriesRecorded = data.trajectoriesRecorded ?? 0;
+        globalStats.patternsLearned = data.patternsLearned ?? 0;
+        globalStats.signalsProcessed = data.signalsProcessed ?? 0;
         globalStats.lastAdaptation = data.lastAdaptation ?? null;
       }
     }
@@ -796,6 +801,32 @@ function savePersistedStats(): void {
   } catch {
     // Ignore save errors
   }
+}
+
+/**
+ * Record a memory-bridge / hook write so `signalsProcessed` reflects real
+ * activity instead of being a permanently-zero dead metric (#2245). Throttled
+ * persistence: increments are batched (every Nth save) to avoid hitting disk
+ * on every single bridge call.
+ *
+ * Returns the new count.
+ */
+let signalsSinceLastSave = 0;
+const SIGNAL_PERSIST_EVERY = 16;
+export function recordSignalProcessed(): number {
+  globalStats.signalsProcessed = (globalStats.signalsProcessed ?? 0) + 1;
+  signalsSinceLastSave++;
+  if (signalsSinceLastSave >= SIGNAL_PERSIST_EVERY) {
+    savePersistedStats();
+    signalsSinceLastSave = 0;
+  }
+  return globalStats.signalsProcessed;
+}
+
+/** Force-persist current stats (e.g. before shutdown / for tests). */
+export function flushIntelligenceStats(): void {
+  savePersistedStats();
+  signalsSinceLastSave = 0;
 }
 
 // ============================================================================

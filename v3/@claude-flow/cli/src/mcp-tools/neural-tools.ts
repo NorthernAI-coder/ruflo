@@ -140,6 +140,44 @@ function saveNeuralStore(store: NeuralStore): void {
   writeFileSync(getNeuralPath(), JSON.stringify(store, null, 2), 'utf-8');
 }
 
+/**
+ * Public helper: store an array of patterns into the neural store so they
+ * surface via `neural_patterns list`. Used by hooks_pretrain so its extracted
+ * patterns are actually queryable, not just bundled in the `pretrain` namespace.
+ * #2245.
+ *
+ * Returns the number of patterns written.
+ */
+export async function storeNeuralPatterns(items: Array<{
+  name: string;
+  type: string;
+  content?: string;
+  metadata?: Record<string, unknown>;
+}>): Promise<{ stored: number; total: number }> {
+  if (!items || items.length === 0) return { stored: 0, total: 0 };
+  // realEmbeddings is initialised by the top-level IIFE in this module;
+  // generateEmbedding() falls back to a hash-based embedding if it isn't.
+  const store = loadNeuralStore();
+  let stored = 0;
+  for (const item of items) {
+    if (!item.name || !item.type) continue;
+    const embedding = await generateEmbedding(item.content ?? item.name);
+    const id = `pattern-${Date.now()}-${stored.toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+    store.patterns[id] = {
+      id,
+      name: String(item.name).slice(0, 200),
+      type: String(item.type).slice(0, 64),
+      embedding,
+      metadata: item.metadata ?? {},
+      createdAt: new Date().toISOString(),
+      usageCount: 0,
+    };
+    stored++;
+  }
+  saveNeuralStore(store);
+  return { stored, total: items.length };
+}
+
 // Generate embedding - uses real ML embeddings if available, falls back to deterministic hash
 async function generateEmbedding(text?: string, dims: number = 384): Promise<number[]> {
   // If real embeddings available and text provided, use them

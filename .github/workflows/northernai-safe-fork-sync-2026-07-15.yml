@@ -1,0 +1,7 @@
+name: One-time safe upstream sync
+on: {push: {paths: [.github/workflows/northernai-safe-fork-sync-2026-07-15.yml]}}
+permissions: {contents: write}
+jobs:
+  sync:
+    uses: NorthernAI-coder/agentic-awesome-skills/.github/workflows/reusable-safe-fork-sync.yml@automation/safe-fork-sync-controller
+    with: {run_date: '2026-07-15'}
